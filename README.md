@@ -105,3 +105,8 @@ class ResponseHandler {
   List<Map<String, dynamic>> data;
 }
 ```
+
+# Example
+![](https://drive.google.com/uc?export=view&id=1qux4ue3FGwd5NVyj_n2InrRVufyKytLO)
+![](https://drive.google.com/uc?export=view&id=1GWBm3_zZg_Fe3x9PEnr2bgEQqseJcFD8)
+![](https://drive.google.com/uc?export=view&id=1l7Pi-6jPXNYCLgEaiLQayzrHCLB_E9Hx)
