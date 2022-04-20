@@ -107,6 +107,6 @@ class ResponseHandler {
 ```
 
 # Example
-![](https://drive.google.com/uc?export=view&id=1qux4ue3FGwd5NVyj_n2InrRVufyKytLO)
-![](https://drive.google.com/uc?export=view&id=1GWBm3_zZg_Fe3x9PEnr2bgEQqseJcFD8)
-![](https://drive.google.com/uc?export=view&id=1l7Pi-6jPXNYCLgEaiLQayzrHCLB_E9Hx)
+![Screenshot_2022-04-08-23-59-05-652_com vladih dni_scanner_example](https://user-images.githubusercontent.com/32783435/164163922-2eb7c8a3-8415-491f-883e-12cc87512efe.jpg)
+![Screenshot_2022-04-08-23-59-42-594_com vladih dni_scanner_example](https://user-images.githubusercontent.com/32783435/164163927-b290e46b-2af8-4b2b-a6a4-88cf4075f388.jpg)
+![Screenshot_2022-04-09-00-00-53-316_com vladih dni_scanner_example](https://user-images.githubusercontent.com/32783435/164163929-4b22310a-e6f6-4453-886b-7c7b622892de.jpg)
