@@ -1,0 +1,6 @@
+mrz 
+signature 
+fingerprint
+photo 
+card 
+dates
