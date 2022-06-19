@@ -28,7 +28,6 @@ public class ocr {
     private final float image_mean;
     private final float image_std;
     private final int rotation;
-    private final boolean best;
     private final String tess_data;
     private final Map<String,String> arg;
     private final String language;
@@ -42,7 +41,6 @@ public class ocr {
                float image_mean,
                float image_std,
                int rotation,
-               boolean best,
                String tess_data,
                Map<String, String> arg, String language) {
         this.binding = binding;
@@ -54,7 +52,6 @@ public class ocr {
         this.image_mean = image_mean;
         this.image_std = image_std;
         this.rotation = rotation;
-        this.best = best;
         this.tess_data = tess_data;
         this.arg = arg;
         this.language = language;
@@ -74,8 +71,7 @@ public class ocr {
                     this.label_path,
                     this.image_mean,
                     this.image_std,
-                    this.rotation,
-                    this.best
+                    this.rotation
             );
             responses result = yolo_model.initialize_model();
             if(result.getType()!="success"){

@@ -66,7 +66,6 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       final float image_mean= (float)((double) args.get("image_mean"));
       final float image_std= (float)((double) args.get("image_std"));
       final int rotation= (int) args.get("rotation");
-      final boolean best= (boolean) args.get("best");
       final String tess_data = args.get("tess_data").toString();
       final Map<String,String> arg = (Map<String,String>) args.get("arg");
       final String language = args.get("language").toString();
@@ -78,8 +77,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
               label_path,
               image_mean,
               image_std,
-              rotation,
-              best, tess_data, arg, language);
+              rotation, tess_data, arg, language);
       scanner.initialize_model();
       this.result.success("ok");
     }catch (Exception e){

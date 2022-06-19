@@ -113,7 +113,7 @@ public class utils {
             Collections.sort(pre_box,compareValues);
             return nms(pre_box, iou_threshold);
         }catch (Exception e){
-            return new ArrayList<>();
+            throw  e;
         }
     }
 
@@ -142,7 +142,7 @@ public class utils {
             }
             return boxes;
         }catch (Exception e){
-            return new ArrayList<>();
+            throw  e;
         }
     }
 

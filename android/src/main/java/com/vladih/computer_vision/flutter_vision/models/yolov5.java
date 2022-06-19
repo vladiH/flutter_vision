@@ -52,7 +52,6 @@ public class yolov5 {
     private final float image_mean;
     private final float image_std;
     private final int rotation;
-    private final boolean best;
     private Bitmap rawBitmap;
     public yolov5(FlutterPlugin.FlutterPluginBinding context,
                   String model_path,
@@ -62,8 +61,7 @@ public class yolov5 {
                   String label_path,
                   float image_mean,
                   float image_std,
-                  int rotation,
-                  boolean best) {
+                  int rotation) {
         this.binding = context;
         this.model_path = model_path;
         this.is_assets = is_assets;
@@ -73,7 +71,6 @@ public class yolov5 {
         this.image_mean = image_mean;
         this.image_std = image_std;
         this.rotation = rotation;
-        this.best = best;
     }
     public Interpreter getModel() {return this.interpreter;}
     public Bitmap get_current_bitmap(){return this.rawBitmap;}
@@ -168,7 +165,7 @@ public class yolov5 {
                                       int image_height,
                                       int image_width,
                                       float iou_threshold,
-                                      float conf_threshold){
+                                      float conf_threshold) throws Exception {
         this.rawBitmap=null;
         ByteBuffer byteBuffer=null;
         try{
@@ -192,7 +189,7 @@ public class yolov5 {
             output = restore_size(output, inputSize,image_width,image_height);
             return output;
         }catch (Exception e){
-            return new ArrayList<>();
+            throw e;
         }finally {
             if(byteBuffer!=null)
                 byteBuffer.clear();

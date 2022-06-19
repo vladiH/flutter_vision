@@ -29,7 +29,6 @@ class _MyAppState extends State<MyApp> {
   late List<Map<String, dynamic>> ocrResults;
   bool isLoaded = false;
   bool isDetecting = false;
-  bool isPredicted = false;
   @override
   void initState() {
     super.initState();
@@ -43,7 +42,6 @@ class _MyAppState extends State<MyApp> {
         setState(() {
           isLoaded = true;
           isDetecting = false;
-          isPredicted = false;
           ocrResults = [];
         });
       });
@@ -68,7 +66,7 @@ class _MyAppState extends State<MyApp> {
       );
     }
     return Scaffold(
-      body: !isPredicted
+      body: ocrResults.isEmpty
           ? Stack(
               fit: StackFit.expand,
               children: [
@@ -119,12 +117,7 @@ class _MyAppState extends State<MyApp> {
                     child: isDetecting
                         ? IconButton(
                             onPressed: () async {
-                              if (controller.value.isStreamingImages) {
-                                await controller.stopImageStream();
-                              }
-                              setState(() {
-                                isDetecting = false;
-                              });
+                              stopImageStream();
                             },
                             icon: const Icon(
                               Icons.stop,
@@ -181,11 +174,8 @@ class _MyAppState extends State<MyApp> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            isDetecting = false;
-            isPredicted = false;
-          });
+        onPressed: () async {
+          await stopImageStream();
         },
         child: const Icon(Icons.restart_alt_rounded),
       ),
@@ -212,27 +202,36 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> startImageStream() async {
-    if (controller.value.isInitialized) {
-      if (controller.value.isStreamingImages) {
-        await controller.stopImageStream();
-      }
-      await controller.startImageStream((image) async {
-        if (!isDetecting) {
-          setState(() {
-            isDetecting = true;
-          });
-          await ocrOnFrame(image);
-        }
-      });
-    } else {
-      setState(() {
-        isDetecting = false;
-      });
+    if (!controller.value.isInitialized) {
+      print('controller not initialized');
+      return;
     }
+    await controller.startImageStream((image) async {
+      if (isDetecting) {
+        return;
+      }
+      setState(() {
+        isDetecting = true;
+      });
+      await ocrOnFrame(image);
+    });
+  }
+
+  Future<void> stopImageStream() async {
+    if (!controller.value.isInitialized) {
+      print('controller not initialized');
+      return;
+    }
+    if (controller.value.isStreamingImages) {
+      await controller.stopImageStream();
+    }
+    setState(() {
+      isDetecting = false;
+      ocrResults.clear();
+    });
   }
 
   Future<void> ocrOnFrame(CameraImage cameraImage) async {
-    await controller.stopImageStream();
     final result = await vision.ocrOnFrame(
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,
@@ -241,7 +240,6 @@ class _MyAppState extends State<MyApp> {
         iouThreshold: 0.6,
         confThreshold: 0.6);
     setState(() {
-      isPredicted = true;
       ocrResults = result.data as List<Map<String, dynamic>>;
     });
   }
