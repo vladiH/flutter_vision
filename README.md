@@ -20,6 +20,7 @@ In `android/app/build.gradle`, add the following setting in android block.
 Comming soon ...
 
 # Usage
+## For OCR MODEL
 1. Create a `assets` folder and place your labels file and model file in it. In `pubspec.yaml` add:
 
 ```
@@ -88,6 +89,55 @@ final responseHandler = await vision.ocrOnFrame(
 await vision.closeOcrModel();
 ```
 
+## For YoloV5 MODEL
+1. Create a `assets` folder and place your labels file and model file in it. In `pubspec.yaml` add:
+
+```
+  assets:
+   - assets/labels.txt
+   - assets/yolov5.tflite
+```
+
+2. Import the library:
+
+```dart
+import 'package:flutter_vision/flutter_vision.dart';
+```
+
+3. Initialized the flutter_vision library:
+
+```dart 
+ FlutterVision vision = FlutterVision();
+```
+
+4. Load the model and labels:
+
+```dart
+final responseHandler = await vision.loadYoloModel(
+    labels: 'assets/labels.txt',
+    modelPath: 'assets/yolov5.tflite',
+    numThreads: 1,
+    useGpu: false);
+```
+
+5. Make your first detection:
+> _Make use of [camera plugin](https://pub.dev/packages/camera)_
+
+```dart
+final responseHandler = await vision.yoloOnFrame(
+    bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
+    imageHeight: cameraImage.height,
+    imageWidth: cameraImage.width,
+    iouThreshold: 0.6,
+    confThreshold: 0.6);
+```
+
+7. Release resources:
+
+```dart
+await vision.closeYoloModel();
+```
+
 # About responseHandler object
 + Parameters
     + type: `success` or `error`.
@@ -96,6 +146,7 @@ await vision.closeOcrModel();
     + data: It is a `List<Map<String, dynamic>>` on ocrOnFrame, otherwise it is a `null`.
 
 data: Contain information about objects detected, such as confidence of detection, coordinates of detected box(x1,y1,x2,y2), detected box image, text from detected box and a tag belonging to detected class.
+
 
 ```dart
 class ResponseHandler {

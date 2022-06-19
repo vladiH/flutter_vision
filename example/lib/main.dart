@@ -1,23 +1,28 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_vision/flutter_vision.dart';
 
+enum Models { yolov5, ocr }
+
 late List<CameraDescription> cameras;
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
   cameras = await availableCameras();
   runApp(
     const MaterialApp(
-      home: MyApp(),
+      home: MyApp(model: Models.yolov5),
     ),
   );
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({required this.model, Key? key}) : super(key: key);
+  final Models model;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -26,7 +31,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late CameraController controller;
   late FlutterVision vision;
-  late List<Map<String, dynamic>> ocrResults;
+  late List<Map<String, dynamic>> modelResults;
   bool isLoaded = false;
   bool isDetecting = false;
   @override
@@ -38,13 +43,28 @@ class _MyAppState extends State<MyApp> {
         return;
       }
       vision = FlutterVision();
-      loadModel().then((value) {
-        setState(() {
-          isLoaded = true;
-          isDetecting = false;
-          ocrResults = [];
-        });
-      });
+      switch (widget.model) {
+        case Models.ocr:
+          loadOcrModel().then((value) {
+            setState(() {
+              isLoaded = true;
+              isDetecting = false;
+              modelResults = [];
+            });
+          });
+          break;
+        case Models.yolov5:
+          loadYoloModel().then((value) {
+            setState(() {
+              isLoaded = true;
+              isDetecting = false;
+              modelResults = [];
+            });
+          });
+          break;
+        default:
+          break;
+      }
     });
   }
 
@@ -52,6 +72,7 @@ class _MyAppState extends State<MyApp> {
   void dispose() async {
     controller.dispose();
     await vision.closeOcrModel();
+    await vision.closeYoloModel();
     super.dispose();
   }
 
@@ -66,7 +87,7 @@ class _MyAppState extends State<MyApp> {
       );
     }
     return Scaffold(
-      body: ocrResults.isEmpty
+      body: modelResults.isEmpty
           ? Stack(
               fit: StackFit.expand,
               children: [
@@ -141,9 +162,9 @@ class _MyAppState extends State<MyApp> {
             )
           : ListView.builder(
               shrinkWrap: true,
-              itemCount: ocrResults.length,
+              itemCount: modelResults.length,
               itemBuilder: (context, index) {
-                Map<String, dynamic> result = ocrResults[index];
+                Map<String, dynamic> result = modelResults[index];
                 return Card(
                   child: Column(
                     children: [
@@ -155,19 +176,20 @@ class _MyAppState extends State<MyApp> {
                       const SizedBox(height: 6),
                       Image.memory(result['image'] as Uint8List),
                       const SizedBox(height: 6),
-                      Visibility(
-                        visible: (result['text'] as String) != "None",
-                        child: Column(
-                          children: [
-                            const Text(
-                              "Image as text:",
-                              style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                            Text((result['text'] as String))
-                          ],
+                      if (widget.model == Models.ocr)
+                        Visibility(
+                          visible: (result['text'] as String) != "None",
+                          child: Column(
+                            children: [
+                              const Text(
+                                "Image as text:",
+                                style: TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                              Text((result['text'] as String))
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 );
@@ -182,7 +204,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  Future<void> loadModel() async {
+  Future<void> loadOcrModel() async {
     final responseHandler = await vision.loadOcrModel(
         labels: 'assets/labels.txt',
         modelPath: 'assets/best-fp16.tflite',
@@ -192,6 +214,19 @@ class _MyAppState extends State<MyApp> {
           'preserve_interword_spaces': '1',
         },
         language: 'spa',
+        numThreads: 1,
+        useGpu: false);
+    if (responseHandler.type != 'success') {
+      setState(() {
+        isLoaded = true;
+      });
+    }
+  }
+
+  Future<void> loadYoloModel() async {
+    final responseHandler = await vision.loadYoloModel(
+        labels: 'assets/labels.txt',
+        modelPath: 'assets/best-fp16.tflite',
         numThreads: 1,
         useGpu: false);
     if (responseHandler.type != 'success') {
@@ -213,7 +248,16 @@ class _MyAppState extends State<MyApp> {
       setState(() {
         isDetecting = true;
       });
-      await ocrOnFrame(image);
+      switch (widget.model) {
+        case Models.ocr:
+          await ocrOnFrame(image);
+          break;
+        case Models.yolov5:
+          await yoloOnFrame(image);
+          break;
+        default:
+          break;
+      }
     });
   }
 
@@ -227,7 +271,7 @@ class _MyAppState extends State<MyApp> {
     }
     setState(() {
       isDetecting = false;
-      ocrResults.clear();
+      modelResults.clear();
     });
   }
 
@@ -240,7 +284,19 @@ class _MyAppState extends State<MyApp> {
         iouThreshold: 0.6,
         confThreshold: 0.6);
     setState(() {
-      ocrResults = result.data as List<Map<String, dynamic>>;
+      modelResults = result.data as List<Map<String, dynamic>>;
+    });
+  }
+
+  Future<void> yoloOnFrame(CameraImage cameraImage) async {
+    final result = await vision.yoloOnFrame(
+        bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
+        imageHeight: cameraImage.height,
+        imageWidth: cameraImage.width,
+        iouThreshold: 0.6,
+        confThreshold: 0.6);
+    setState(() {
+      modelResults = result.data as List<Map<String, dynamic>>;
     });
   }
 }
