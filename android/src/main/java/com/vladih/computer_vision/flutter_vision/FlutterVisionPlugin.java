@@ -2,6 +2,8 @@ package com.vladih.computer_vision.flutter_vision;
 
 import androidx.annotation.NonNull;
 import com.vladih.computer_vision.flutter_vision.models.ocr;
+import com.vladih.computer_vision.flutter_vision.models.yolov5;
+
 import org.opencv.android.OpenCVLoader;
 
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private FlutterPluginBinding binding;
   private Result result;
   private ocr scanner;
+  private yolov5 yolov5;
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
     OpenCVLoader.initDebug();
@@ -41,7 +44,13 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       ocr_on_frame((Map) call.arguments);
     } else if(call.method.equals("closeOcrModel")){
       close_ocr_model();
-    }else {
+    }else if(call.method.equals("loadYoloModel")){
+      load_yolo_model((Map) call.arguments);
+    }else if(call.method.equals("yoloOnFrame")){
+      yolo_on_frame((Map) call.arguments);
+    } else if(call.method.equals("closeYoloModel")){
+      close_yolo_model();
+    } else {
       result.notImplemented();
     }
   }
@@ -81,7 +90,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       scanner.initialize_model();
       this.result.success("ok");
     }catch (Exception e){
-      this.result.error("100", "Cannot initialize model", e);
+      this.result.error("100", "Cannot initialize Ocr model", e);
     }
   }
 
@@ -102,5 +111,55 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
   private void close_ocr_model(){
     scanner.close();
+  }
+
+
+  private void load_yolo_model(Map<String, Object> args){
+    try {
+      /*for(Map.Entry entry:args.entrySet()){
+        System.out.println(entry.getKey());
+        System.out.println(entry.getValue());
+      }*/
+      final String model = args.get("model_path").toString();
+      final Object is_asset_obj = args.get("is_asset");
+      final boolean is_asset = is_asset_obj==null?false:(boolean) is_asset_obj;
+      final int num_threads = (int) args.get("num_threads");
+      final boolean use_gpu = (boolean) args.get("use_gpu");
+      final String label_path= args.get("label_path").toString();
+      final float image_mean= (float)((double) args.get("image_mean"));
+      final float image_std= (float)((double) args.get("image_std"));
+      final int rotation= (int) args.get("rotation");
+      yolov5 = new yolov5(binding,
+              model,
+              is_asset,
+              num_threads,
+              use_gpu,
+              label_path,
+              image_mean,
+              image_std,
+              rotation);
+      yolov5.initialize_model();
+      this.result.success("ok");
+    }catch (Exception e){
+      this.result.error("100", "Cannot initialize Yolov5 model", e);
+    }
+  }
+
+  private void yolo_on_frame(Map<String, Object> args){
+    try {
+      List<byte[]> image = (ArrayList) args.get("bytesList");
+      int image_height = (int) args.get("image_height");
+      int image_width = (int) args.get("image_width");
+      float iou_threshold = (float)(double)( args.get("iou_threshold"));
+      float conf_threshold = (float)(double)( args.get("conf_threshold"));
+      List<Map<String, Object>> result = yolov5.predict(image, image_height, image_width, iou_threshold, conf_threshold);
+      this.result.success(result);
+    }catch (Exception e){
+      this.result.error("100", "Detection Error", e);
+    }
+  }
+
+  private void close_yolo_model(){
+    yolov5.close();
   }
 }

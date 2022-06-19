@@ -14,11 +14,20 @@ class OcrResult {
     required this.tag,
   });
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toOcrJson() {
     return {
       "confidence": confidence,
       "box": box.toJson(),
       "text": text,
+      "image": image,
+      "tag": tag,
+    };
+  }
+
+  Map<String, dynamic> toYoloJson() {
+    return {
+      "confidence": confidence,
+      "box": box.toJson(),
       "image": image,
       "tag": tag,
     };

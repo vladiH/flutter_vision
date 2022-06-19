@@ -33,7 +33,9 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -381,5 +383,35 @@ public class yolov5 {
 
         matrix.invert(new Matrix());
         return matrix;
+    }
+    public List<Map<String, Object>> predict(List<byte[]> image,
+                                             int image_height,
+                                             int image_width,
+                                             float iou_threshold,
+                                             float conf_threshold) throws Exception {
+        try{
+            List<Map<String, Object>> result = new ArrayList<>();
+            List<float[]> yolo_result = detectOnFrame(image,image_height,image_width,
+                    iou_threshold,conf_threshold);
+            Bitmap bitmap=get_current_bitmap();
+            Vector<String> labels = getLabels();
+            //utils.getScreenshotBmp(bitmap, "current");
+            for (float [] box:yolo_result) {
+                Map<String, Object> output = new HashMap<>();
+                Bitmap crop = utils.crop_bitmap(bitmap,
+                        box[0],box[1],box[2],box[3]);
+                //utils.getScreenshotBmp(crop, "crop");
+                Bitmap tmp = crop.copy(crop.getConfig(),crop.isMutable());
+                output.put("yolo",box);
+                output.put("image",utils.bitmap_to_byte(crop));
+                output.put("tag",labels.get((int)box[5]));
+                result.add(output);
+            }
+            bitmap.recycle();
+            return result;
+        } catch (Exception e){
+            //System.out.println(e.getStackTrace());
+            throw  new Exception("Unexpected error: "+e.getMessage());
+        }
     }
 }

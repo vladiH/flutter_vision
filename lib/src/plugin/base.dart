@@ -13,7 +13,7 @@ abstract class BaseFlutterVision {
   // ignore: constant_identifier_names
   static const String TESS_DATA_PATH = 'assets/tessdata';
   static const MethodChannel _channel = MethodChannel('flutter_vision');
-  bool _isLoadedOcrModel = false;
+  MethodChannel get channel => _channel;
 
   Future<ResponseHandler> loadOcrModel(
       {required String modelPath,
@@ -21,43 +21,9 @@ abstract class BaseFlutterVision {
       int? numThreads,
       bool? useGpu,
       String? language,
-      Map<String, String>? args}) async {
-    try {
-      if (isLoadedOcrModel) {
-        return Success(message: 'Model is already loaded');
-      }
-      final String testData = await _loadTessData();
-      final result = await _channel.invokeMethod<String?>('loadOcrModel', {
-        'model_path': modelPath,
-        'is_asset': true,
-        'num_threads': numThreads ?? 1,
-        'use_gpu': useGpu ?? false,
-        'label_path': labels,
-        'image_mean': 0.0,
-        'image_std': 255.0,
-        'rotation': 90,
-        'tess_data': testData,
-        'arg': args,
-        'language': language ?? 'eng'
-      });
-      if (result == null) {
-        return Error(message: 'Unknown error');
-      }
-      switch (result.toString()) {
-        case 'ok':
-          _isLoadedOcrModel = true;
-          return Success(message: result.toString());
-        case 'error':
-          return Error(message: result.toString());
-        default:
-          return Error(message: 'Not a valid status');
-      }
-    } catch (e, st) {
-      return Error(message: 'Unknown error', stackTrace: st);
-    }
-  }
+      Map<String, String>? args});
 
-  static Future<String> _loadTessData() async {
+  Future<String> loadTessData() async {
     try {
       final Directory appDirectory = await getApplicationDocumentsDirectory();
       final String tessdataDirectory = join(appDirectory.path, 'tessdata');
@@ -65,15 +31,14 @@ abstract class BaseFlutterVision {
       if (!await Directory(tessdataDirectory).exists()) {
         await Directory(tessdataDirectory).create();
       }
-      await _copyTessDataToAppDocumentsDirectory(tessdataDirectory);
+      await copyTessDataToAppDocumentsDirectory(tessdataDirectory);
       return appDirectory.path;
     } catch (e) {
       rethrow;
     }
   }
 
-  static Future _copyTessDataToAppDocumentsDirectory(
-      String tessdataDirectory) async {
+  Future copyTessDataToAppDocumentsDirectory(String tessdataDirectory) async {
     final String config = await rootBundle.loadString(TESS_DATA_CONFIG);
     Map<String, dynamic> files = jsonDecode(config);
     for (var file in files["files"]) {
@@ -88,12 +53,35 @@ abstract class BaseFlutterVision {
     }
   }
 
-  MethodChannel get channel => _channel;
-  bool get isLoadedOcrModel => _isLoadedOcrModel;
+  Future<ResponseHandler> ocrOnFrame({
+    required List<Uint8List> bytesList,
+    required int imageHeight,
+    required int imageWidth,
+    required List<int> classIsText,
+    double? iouThreshold,
+    double? confThreshold,
+  });
+
   Future<void> closeOcrModel() async {
-    if (_isLoadedOcrModel) {
-      await channel.invokeMethod('closeOcrModel');
-      _isLoadedOcrModel = false;
-    }
+    await channel.invokeMethod('closeOcrModel');
+  }
+
+  Future<ResponseHandler> loadYoloModel({
+    required String modelPath,
+    required String labels,
+    int? numThreads,
+    bool? useGpu,
+  });
+
+  Future<ResponseHandler> yoloOnFrame({
+    required List<Uint8List> bytesList,
+    required int imageHeight,
+    required int imageWidth,
+    double? iouThreshold,
+    double? confThreshold,
+  });
+
+  Future<void> closeYoloModel() async {
+    await channel.invokeMethod('closeYoloModel');
   }
 }

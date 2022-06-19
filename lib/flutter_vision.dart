@@ -18,7 +18,7 @@ abstract class FlutterVision {
     }
   }
 
-  ///loadOcrModel loads both YOLOv5 and Tesseract4 model from the assets folder and
+  ///loadOcrModel: loads both YOLOv5 and Tesseract4 model from the assets folder and
   ///return a ResponseHandler object.
   ///
   ///if the load is successful, it returns a ResponseHandler as a success object,
@@ -56,7 +56,6 @@ abstract class FlutterVision {
   ///where map is mapped as follows:
   ///
   ///```Map<String, dynamic>:{
-  ///   "detectedClass": String,
   ///    "confidence": double,
   ///    "box": {x1:double, y1:double, x2:double, y2:double},
   ///    "text": String,
@@ -79,8 +78,64 @@ abstract class FlutterVision {
     double? confThreshold,
   });
 
-  /// loadOcrModel dispose the model, clean and save resources
+  /// dispose OCRModel, clean and save resources
   Future<void> closeOcrModel();
+
+  ///loadYoloModel: load YOLOv5 model from the assets folder and
+  ///return a ResponseHandler object.
+  ///
+  ///if the load is successful, it returns a ResponseHandler as a success object,
+  ///otherwise it returns a ResponseHandler as an error object
+  ///```json:{
+  /// "type": "success" or "error",
+  /// "message": "ok",
+  /// "data": {}```
+  ///
+  /// args: [modelPath] - path to the model file
+  /// ,[labelsPath] - path to the labels file
+  /// ,[numThreads] - number of threads to use for inference
+  /// ,[useGPU] - use GPU for inference
+  Future<ResponseHandler> loadYoloModel(
+      {required String modelPath,
+      required String labels,
+      int? numThreads,
+      bool? useGpu});
+
+  ///yoloOnFrame accept a byte List as input and
+  ///return a ResponseHandler object.
+  ///
+  ///if yoloOnFrame run without error, it returns a ResponseHandler as a success object,
+  ///otherwise it returns a ResponseHandler as an error object.
+  ///
+  ///```json:{
+  ///  "type": 'success',
+  ///  "message": "ok",
+  ///  "data": List<Map<String, dynamic>>
+  /// }```
+  ///where map is mapped as follows:
+  ///
+  ///```Map<String, dynamic>:{
+  ///    "confidence": double,
+  ///    "box": {x1:double, y1:double, x2:double, y2:double},
+  ///    "image": Uint8List,
+  ///    "tag": String
+  /// }```
+  ///
+  ///args: [bytesList] - image as byte list
+  ///, [imageHeight] - image height
+  ///, [imageWidth] - image width
+  ///, [iouThreshold] - intersection over union threshold
+  ///, [confThreshold] - confidence threshold
+  Future<ResponseHandler> yoloOnFrame({
+    required List<Uint8List> bytesList,
+    required int imageHeight,
+    required int imageWidth,
+    double? iouThreshold,
+    double? confThreshold,
+  });
+
+  /// dispose OCRModel, clean and save resources
+  Future<void> closeYoloModel();
 }
 
 ///loadOcrModel: load custom YOLOv5 model from the assets folder,
