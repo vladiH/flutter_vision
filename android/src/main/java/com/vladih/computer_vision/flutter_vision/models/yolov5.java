@@ -233,7 +233,7 @@ public class yolov5 {
 
             List<float []> output = utils.filter_box(this.output,iou_threshold,conf_threshold,inputSize,inputSize);
 
-//            output = restore_size(output, inputSize,image_width,image_height);
+            output = restore_size(output, inputSize,image_width,image_height);
             return output;
 
 
