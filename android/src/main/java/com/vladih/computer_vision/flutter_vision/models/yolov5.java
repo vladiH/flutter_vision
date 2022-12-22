@@ -183,17 +183,14 @@ public class yolov5 {
                                       float conf_threshold) throws Exception {
         this.rawBitmap=null;
         ByteBuffer byteBuffer=null;
-        System.out.println("Detec on Frame Height and Width: " + image_height + "x" + image_width);
         try{
             Tensor tensor = this.interpreter.getInputTensor(0);
             int[] shape = tensor.shape();
             int inputSize = shape[1];
-            System.out.println("Input Size: " + inputSize);
             //float gain = Math.min(inputSize/(float)image_width, inputSize/(float)image_height);
             //float padx = (inputSize-image_width*gain)/2;
             //float pady = (inputSize-image_height*gain)/2;
             this.rawBitmap = feedInputToBitmap(image, image_height, image_width, this.rotation);
-            System.out.println("Raw Bitmap size: " + rawBitmap.getHeight() + "x" + rawBitmap.getWidth());
             byteBuffer = feedInputTensor(this.rawBitmap.copy(this.rawBitmap.getConfig(), this.rawBitmap.isMutable()), this.image_mean, this.image_std);
             this.output = new float[1][25200][this.labels.size()+5];
             this.interpreter.run(byteBuffer, this.output);
@@ -244,22 +241,6 @@ public class yolov5 {
         }
     }
 
-    /** Loads input image, and applies preprocessing. */
-    private TensorImage loadImage(final Bitmap bitmapBuffer, int imageRotationDegrees, Size tfInputSize, TensorImage tfInputBuffer) {
-        // Initializes preprocessor if null
-        ImageProcessor tfImageProcessor =
-                new ImageProcessor.Builder()
-                        .add(
-                                new ResizeOp(
-                                        tfInputSize.getHeight(),
-                                        tfInputSize.getWidth(),
-                                        ResizeOp.ResizeMethod.NEAREST_NEIGHBOR))
-                        .build();
-
-        tfInputBuffer.load(bitmapBuffer);
-        return tfImageProcessor.process(tfInputBuffer);
-    }
-
     private List<float[]>  restore_size(List<float[]> nms,
                                         int model_size,
                                         int src_image_width,
@@ -301,10 +282,6 @@ public class yolov5 {
         V.get(data, Yb, Vb);
         U.get(data, Yb + Vb, Ub);
 
-        return createBitmap(imageWidth, imageHeight, data, rotation);
-    }
-
-    private Bitmap createBitmap(int imageWidth, int imageHeight, byte[] data, int rotation) {
         Bitmap bitmapRaw = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
         Allocation bmData = renderScriptNV21ToRGBA888(
                 this.binding.getApplicationContext(),
@@ -318,6 +295,7 @@ public class yolov5 {
         bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
         return bitmapRaw;
     }
+
 
     private Allocation renderScriptNV21ToRGBA888(android.content.Context context, int width, int height, byte[] nv21) {
         try{
