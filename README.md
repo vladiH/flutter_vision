@@ -119,7 +119,7 @@ final responseHandler = await vision.loadYoloModel(
     numThreads: 1,
     useGpu: false);
 ```
-
+### For camera live feed
 5. Make your first detection:
 > _Make use of [camera plugin](https://pub.dev/packages/camera)_
 
@@ -132,7 +132,19 @@ final responseHandler = await vision.yoloOnFrame(
     confThreshold: 0.6);
 ```
 
-7. Release resources:
+### For static image
+5. Make your first detection:
+
+```dart
+final responseHandler = await vision.yoloOnImage(
+    bytesList: imageBytes,
+    imageHeight: imageHeight,
+    imageWidth: imageWidth,
+    iouThreshold: 0.6,
+    confThreshold: 0.6);
+```
+
+6. Release resources:
 
 ```dart
 await vision.closeYoloModel();
