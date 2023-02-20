@@ -154,6 +154,7 @@ public class utils {
             final int height = Math.abs((int)(y2-y1));
             //System.out.println("CROPPP");
             //System.out.println(String.valueOf(x)+" "+String.valueOf(y)+" "+String.valueOf(width)+" "+String.valueOf(height));
+
             return  Bitmap.createBitmap(bitmap,x,y,width,height);
         }catch (Exception e){
             //System.out.println("CROPPP ERROR");

@@ -1,8 +1,12 @@
 package com.vladih.computer_vision.flutter_vision.models;
 
+import static android.content.ContentValues.TAG;
+import static java.lang.Math.min;
+
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -12,6 +16,8 @@ import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.renderscript.Type;
+import android.util.Log;
+import android.util.Size;
 
 import com.vladih.computer_vision.flutter_vision.utils.responses;
 import com.vladih.computer_vision.flutter_vision.utils.utils;
@@ -22,6 +28,13 @@ import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
 import org.tensorflow.lite.gpu.CompatibilityList;
 import org.tensorflow.lite.gpu.GpuDelegate;
+import org.tensorflow.lite.support.common.ops.NormalizeOp;
+import org.tensorflow.lite.support.image.ImageProcessor;
+import org.tensorflow.lite.support.image.TensorImage;
+import org.tensorflow.lite.support.image.ops.ResizeOp;
+import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp;
+import org.tensorflow.lite.support.image.ops.Rot90Op;
+import org.tensorflow.lite.support.image.ops.TransformToGrayscaleOp;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -197,29 +210,65 @@ public class yolov5 {
                 byteBuffer.clear();
         }
     }
+
+    public List<float []> detectOnImage(byte[] image,
+                                        int image_height,
+                                        int image_width,
+                                        float iou_threshold,
+                                        float conf_threshold)  throws  Exception{
+        ByteBuffer byteBuffer=null;
+        try{
+            this.rawBitmap = null;
+            int[] inputShape = this.interpreter.getInputTensor(0).shape();
+            int inputSize = inputShape[1];
+
+            this.rawBitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
+            byteBuffer = feedInputTensor(this.rawBitmap.copy(this.rawBitmap.getConfig(), this.rawBitmap.isMutable()), this.image_mean, this.image_std);
+
+            this.output = new float[1][25200][this.labels.size()+5];
+            interpreter.run(byteBuffer, this.output);
+
+            List<float []> output = utils.filter_box(this.output,iou_threshold,conf_threshold,inputSize,inputSize);
+
+            output = restore_size(output, inputSize,image_width,image_height);
+            return output;
+        }catch (Exception e){
+            throw e;
+        } finally {
+            if(byteBuffer != null){
+                byteBuffer.clear();
+            }
+        }
+    }
+
     private List<float[]>  restore_size(List<float[]> nms,
                                         int model_size,
                                         int src_image_width,
                                         int src_image_height){
         try{
-            float gain = Math.min(model_size/(float) src_image_width,model_size/(float) src_image_height);
+            float gain = min(model_size/(float) src_image_width,model_size/(float) src_image_height);
 
             float padx = (model_size-src_image_width*gain)/2f;
             float pady = (model_size-src_image_height*gain)/2f;
             //System.out.println("////////////////RESTORE SIZE");
             //System.out.println(String.valueOf(src_image_width)+" "+String.valueOf(src_image_height));
             for(int i=0;i<nms.size();i++){
-                nms.get(i)[0]=Math.min(src_image_width, Math.max((nms.get(i)[0]-padx)/gain,0));
-                nms.get(i)[1]=Math.min(src_image_height, Math.max((nms.get(i)[1]-pady)/gain,0));
-                nms.get(i)[2]=Math.min(src_image_width, Math.max((nms.get(i)[2]-padx)/gain,0));
-                nms.get(i)[3]=Math.min(src_image_height, Math.max((nms.get(i)[3]-pady)/gain,0));
+                nms.get(i)[0]= min(src_image_width, Math.max((nms.get(i)[0]-padx)/gain,0));
+                nms.get(i)[1]= min(src_image_height, Math.max((nms.get(i)[1]-pady)/gain,0));
+                nms.get(i)[2]= min(src_image_width, Math.max((nms.get(i)[2]-padx)/gain,0));
+                nms.get(i)[3]= min(src_image_height, Math.max((nms.get(i)[3]-pady)/gain,0));
             }
             return  nms;
         }catch (Exception e){
             throw new RuntimeException(e.getMessage());
         }
     }
+
+
+
+
     private Bitmap feedInputToBitmap(List<byte[]> bytesList, int imageHeight, int imageWidth, int rotation) throws Exception {
+
         ByteBuffer Y = ByteBuffer.wrap(bytesList.get(0));
         ByteBuffer U = ByteBuffer.wrap(bytesList.get(1));
         ByteBuffer V = ByteBuffer.wrap(bytesList.get(2));
@@ -246,6 +295,7 @@ public class yolov5 {
         bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
         return bitmapRaw;
     }
+
 
     private Allocation renderScriptNV21ToRGBA888(android.content.Context context, int width, int height, byte[] nv21) {
         try{
@@ -373,7 +423,7 @@ public class yolov5 {
                 final float scaleFactor = Math.max(scaleFactorX, scaleFactorY);
                 matrix.postScale(scaleFactor, scaleFactor);
             }else if(maintainAspectRatio){
-                final float scaleFactor = Math.min(scaleFactorX, scaleFactorY);
+                final float scaleFactor = min(scaleFactorX, scaleFactorY);
                 matrix.postScale(scaleFactor, scaleFactor);
             }
             else {
@@ -393,25 +443,47 @@ public class yolov5 {
             List<Map<String, Object>> result = new ArrayList<>();
             List<float[]> yolo_result = detectOnFrame(image,image_height,image_width,
                     iou_threshold,conf_threshold);
-            Bitmap bitmap=get_current_bitmap();
-            Vector<String> labels = getLabels();
-            //utils.getScreenshotBmp(bitmap, "current");
-            for (float [] box:yolo_result) {
-                Map<String, Object> output = new HashMap<>();
-                Bitmap crop = utils.crop_bitmap(bitmap,
-                        box[0],box[1],box[2],box[3]);
-                //utils.getScreenshotBmp(crop, "crop");
-                Bitmap tmp = crop.copy(crop.getConfig(),crop.isMutable());
-                output.put("yolo",box);
-                output.put("image",utils.bitmap_to_byte(crop));
-                output.put("tag",labels.get((int)box[5]));
-                result.add(output);
-            }
-            bitmap.recycle();
+            listPredictions(result, yolo_result);
             return result;
         } catch (Exception e){
             //System.out.println(e.getStackTrace());
             throw  new Exception("Unexpected error: "+e.getMessage());
         }
+    }
+
+    public List<Map<String, Object>> predictStaticImage(byte[] image,
+                                             int image_height,
+                                             int image_width,
+                                             float iou_threshold,
+                                             float conf_threshold) throws Exception {
+        try{
+            List<Map<String, Object>> result = new ArrayList<>();
+            List<float[]> yolo_result = detectOnImage(image,image_height,image_width,
+                    iou_threshold,conf_threshold);
+            listPredictions(result, yolo_result);
+            return result;
+        } catch (Exception e){
+            //System.out.println(e.getStackTrace());
+            throw  new Exception("Unexpected error: "+e.getMessage());
+        }
+    }
+
+
+    private void listPredictions(List<Map<String, Object>> result, List<float[]> yolo_result) throws Exception {
+        Bitmap bitmap=get_current_bitmap();
+        Vector<String> labels = getLabels();
+        //utils.getScreenshotBmp(bitmap, "current");
+        for (float [] box: yolo_result) {
+            Map<String, Object> output = new HashMap<>();
+            Bitmap crop = utils.crop_bitmap(bitmap,
+                    box[0],box[1],box[2],box[3]);
+            //utils.getScreenshotBmp(crop, "crop");
+            Bitmap tmp = crop.copy(crop.getConfig(),crop.isMutable());
+            output.put("yolo",box);
+            output.put("image",utils.bitmap_to_byte(crop));
+            output.put("tag",labels.get((int)box[5]));
+            result.add(output);
+        }
+        bitmap.recycle();
     }
 }

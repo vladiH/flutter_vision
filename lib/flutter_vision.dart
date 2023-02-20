@@ -96,10 +96,7 @@ abstract class FlutterVision {
   /// ,[numThreads] - number of threads to use for inference
   /// ,[useGPU] - use GPU for inference
   Future<ResponseHandler> loadYoloModel(
-      {required String modelPath,
-      required String labels,
-      int? numThreads,
-      bool? useGpu});
+      {required String modelPath, required String labels, int? numThreads, bool? useGpu});
 
   ///yoloOnFrame accept a byte List as input and
   ///return a ResponseHandler object.
@@ -128,6 +125,39 @@ abstract class FlutterVision {
   ///, [confThreshold] - confidence threshold
   Future<ResponseHandler> yoloOnFrame({
     required List<Uint8List> bytesList,
+    required int imageHeight,
+    required int imageWidth,
+    double? iouThreshold,
+    double? confThreshold,
+  });
+
+  ///yoloOnFrame accept a Uint8List as input and
+  ///return a ResponseHandler object.
+  ///
+  ///if yoloOnImage run without error, it returns a ResponseHandler as a success object,
+  ///otherwise it returns a ResponseHandler as an error object.
+  ///
+  ///```json:{
+  ///  "type": 'success',
+  ///  "message": "ok",
+  ///  "data": List<Map<String, dynamic>>
+  /// }```
+  ///where map is mapped as follows:
+  ///
+  ///```Map<String, dynamic>:{
+  ///    "confidence": double,
+  ///    "box": {x1:double, y1:double, x2:double, y2:double},
+  ///    "image": Uint8List,
+  ///    "tag": String
+  /// }```
+  ///
+  ///args: [bytesList] - image bytes
+  ///, [imageHeight] - image height
+  ///, [imageWidth] - image width
+  ///, [iouThreshold] - intersection over union threshold
+  ///, [confThreshold] - confidence threshold
+  Future<ResponseHandler> yoloOnImage({
+    required Uint8List bytesList,
     required int imageHeight,
     required int imageWidth,
     double? iouThreshold,

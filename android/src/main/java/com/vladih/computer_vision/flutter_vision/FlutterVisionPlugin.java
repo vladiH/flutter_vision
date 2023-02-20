@@ -48,6 +48,8 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       load_yolo_model((Map) call.arguments);
     }else if(call.method.equals("yoloOnFrame")){
       yolo_on_frame((Map) call.arguments);
+    } else if(call.method.equals("yoloOnImage")){
+      yolo_on_image((Map) call.arguments);
     } else if(call.method.equals("closeYoloModel")){
       close_yolo_model();
     } else {
@@ -153,6 +155,20 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float iou_threshold = (float)(double)( args.get("iou_threshold"));
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
       List<Map<String, Object>> result = yolov5.predict(image, image_height, image_width, iou_threshold, conf_threshold);
+      this.result.success(result);
+    }catch (Exception e){
+      this.result.error("100", "Detection Error", e);
+    }
+  }
+
+  private void yolo_on_image(Map<String, Object> args){
+    try {
+      byte[] image = (byte[]) args.get("bytesList");
+      int image_height = (int) args.get("image_height");
+      int image_width = (int) args.get("image_width");
+      float iou_threshold = (float)(double)( args.get("iou_threshold"));
+      float conf_threshold = (float)(double)( args.get("conf_threshold"));
+      List<Map<String, Object>> result = yolov5.predictStaticImage(image, image_height, image_width, iou_threshold, conf_threshold);
       this.result.success(result);
     }catch (Exception e){
       this.result.error("100", "Detection Error", e);
