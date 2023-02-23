@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_vision/src/plugin/android.dart';
-import 'package:flutter_vision/src/utils/response_handler.dart';
 
 abstract class FlutterVision {
   factory FlutterVision() {
@@ -34,7 +33,7 @@ abstract class FlutterVision {
   /// ,[useGPU] - use GPU for inference
   /// ,[language] - language for tesseract4(en,spa,de,fr,it,nl,ru,pt,tr,zh)
   /// ,[tesseract4Config] - tesseract4 config
-  Future<ResponseHandler> loadOcrModel(
+  Future<void> loadOcrModel(
       {required String modelPath,
       required String labels,
       int? numThreads,
@@ -69,7 +68,7 @@ abstract class FlutterVision {
   ///, [classIsText] - list of classes to be detected as text
   ///, [iouThreshold] - intersection over union threshold
   ///, [confThreshold] - confidence threshold
-  Future<ResponseHandler> ocrOnFrame({
+  Future<List<Map<String, dynamic>>> ocrOnFrame({
     required List<Uint8List> bytesList,
     required int imageHeight,
     required int imageWidth,
@@ -95,8 +94,11 @@ abstract class FlutterVision {
   /// ,[labelsPath] - path to the labels file
   /// ,[numThreads] - number of threads to use for inference
   /// ,[useGPU] - use GPU for inference
-  Future<ResponseHandler> loadYoloModel(
-      {required String modelPath, required String labels, int? numThreads, bool? useGpu});
+  Future<void> loadYoloModel(
+      {required String modelPath,
+      required String labels,
+      int? numThreads,
+      bool? useGpu});
 
   ///yoloOnFrame accept a byte List as input and
   ///return a ResponseHandler object.
@@ -123,7 +125,7 @@ abstract class FlutterVision {
   ///, [imageWidth] - image width
   ///, [iouThreshold] - intersection over union threshold
   ///, [confThreshold] - confidence threshold
-  Future<ResponseHandler> yoloOnFrame({
+  Future<List<Map<String, dynamic>>> yoloOnFrame({
     required List<Uint8List> bytesList,
     required int imageHeight,
     required int imageWidth,
@@ -156,7 +158,7 @@ abstract class FlutterVision {
   ///, [imageWidth] - image width
   ///, [iouThreshold] - intersection over union threshold
   ///, [confThreshold] - confidence threshold
-  Future<ResponseHandler> yoloOnImage({
+  Future<List<Map<String, dynamic>>> yoloOnImage({
     required Uint8List bytesList,
     required int imageHeight,
     required int imageWidth,
@@ -166,16 +168,46 @@ abstract class FlutterVision {
 
   /// dispose OCRModel, clean and save resources
   Future<void> closeYoloModel();
-}
 
-///loadOcrModel: load custom YOLOv5 model from the assets folder,
-///return a ErrorHandler object.
-///
-///If loads is successful, returns a Success object,
-///if there is an error, returns an Error object
-/*Future<ErrorHandler> loadYoloModel(
-      {required String modelPath,
-      required String labels,
-      int numThreads,
-      bool isAsset,
-      bool useGpu});*/
+  ///loadTesseractModel: load Tesseract5 model from the assets folder and
+  ///return a ResponseHandler object.
+  ///
+  ///if the load is successful, it returns a ResponseHandler as a success object,
+  ///otherwise it returns a ResponseHandler as an error object
+  ///```json:{
+  /// "type": "success" or "error",
+  /// "message": "ok",
+  /// "data": {}```
+  ///
+  /// ,[language] - language for tesseract4(en,spa,de,fr,it,nl,ru,pt,tr,zh)
+  /// ,[tesseract4Config] - tesseract4 config
+  Future<void> loadTesseractModel(
+      {String? language, Map<String, String>? args});
+
+  ///tesseractOnFrame accept a byte List as input and
+  ///return a ResponseHandler object.
+  ///
+  ///if scanOnFrame run without error, it returns a ResponseHandler as a success object,
+  ///otherwise it returns a ResponseHandler as an error object.
+  ///
+  ///```json:{
+  ///  "type": 'success',
+  ///  "message": "ok",
+  ///  "data": List<Map<String, dynamic>>
+  /// }```
+  ///where map is mapped as follows:
+  ///
+  ///```Map<String, dynamic>:{
+  ///    "confidence": double,
+  ///    "box": {x1:double, y1:double, x2:double, y2:double},
+  ///    "text": String,
+  ///    "image": Uint8List,
+  ///    "tag": String
+  /// }```
+  ///
+  ///args: [bytesList] - image as byte list
+  Future<List<String>> tesseractOnImage({required Uint8List bytesList});
+
+  /// dispose OCRModel, clean and save resources
+  Future<void> closeTesseractModel();
+}

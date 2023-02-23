@@ -1,6 +1,18 @@
 package com.vladih.computer_vision.flutter_vision.utils;
+import static java.lang.Math.min;
+
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.os.Environment;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicYuvToRGB;
+import android.renderscript.Type;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
@@ -10,19 +22,20 @@ import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.RotatedRect;
-import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+import org.tensorflow.lite.DataType;
+import org.tensorflow.lite.Tensor;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class utils {
@@ -73,78 +86,7 @@ public class utils {
             System.out.println("");
         }
     }*/
-    public static List<float[]>filter_box(float [][][] model_outputs, float iou_threshold,
-                                    float conf_threshold, float modelx_size, float modely_size){
-        try {
-            List<float[]> pre_box = new ArrayList<>();
-            int conf_index = 4;
-            int class_index = 5;
-            int dimension = model_outputs[0][0].length;
-            int rows = model_outputs[0].length;
-            for(int i=0; i<rows;i++){
-                //if (model_outputs[0][i][class_index]<=conf_threshold) continue;
-                float[] tmp;
-                float x1,y1,x2,y2,conf;
-                //convert xywh to xyxy
-                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f)*modelx_size;
-                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*modely_size;
-                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*modelx_size;
-                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*modely_size;
-                conf = model_outputs[0][i][conf_index];
-                for(int j=class_index;j<dimension;j++){
-                    final float score = model_outputs[0][i][j]*model_outputs[0][i][conf_index];
-                    //change if result is poor
-                    if(score<=conf_threshold) continue;
-                    tmp = new float[7];
-                    tmp[0]=x1;
-                    tmp[1]=y1;
-                    tmp[2]=x2;
-                    tmp[3]=y2;
-                    tmp[4]=conf;
-                    tmp[5]=(j-class_index)*1f;
-                    tmp[6]=score;
-                    pre_box.add(tmp);
-                }
-            }
-            if (pre_box.isEmpty()) return new ArrayList<>();
-            //for reverse orden, insteand of using .reversed method
-            Comparator<float []> compareValues = (v1,v2)->Float.compare(v2[6],v1[6]);
-            //Collections.sort(pre_box,compareValues.reversed());
-            Collections.sort(pre_box,compareValues);
-            return nms(pre_box, iou_threshold);
-        }catch (Exception e){
-            throw  e;
-        }
-    }
 
-    private static List<float[]>nms(List<float[]> boxes, float iou_threshold){
-        try {
-            for(int i =0; i<boxes.size();i++){
-                final float [] box = boxes.get(i);
-                for(int j =i+1; j<boxes.size();j++){
-                    final float [] next_box = boxes.get(j);
-                    float x1 = Math.max(next_box[0],box[0]);
-                    float y1 = Math.max(next_box[1],box[1]);
-                    float x2 = Math.min(next_box[2],box[2]);
-                    float y2 = Math.min(next_box[3],box[3]);
-
-                    final float width = Math.max(0,x2-x1);
-                    final float height = Math.max(0,y2-y1);
-                    final float intersection = width*height;
-                    final float union = (next_box[2]-next_box[0])*(next_box[3]-next_box[1])
-                            + (box[2]-box[0])*(box[3]-box[1])-intersection;
-                    float iou = intersection/union;
-                    if (iou>iou_threshold){
-                        boxes.remove(j);
-                        j--;
-                    }
-                }
-            }
-            return boxes;
-        }catch (Exception e){
-            throw  e;
-        }
-    }
 
     public static Bitmap crop_bitmap(Bitmap bitmap, float x1, float y1, float x2, float y2) throws Exception {
         try{
@@ -216,7 +158,6 @@ public class utils {
         Imgproc.dilate(img, img, element,new Point(-1,-1),4);
         Bitmap bmp = Bitmap.createBitmap((int)img.width(), (int)img.height(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(img, bmp);
-        //utils.getScreenshotBmp(bmp,"ASSS");
         List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
         Mat hierarchy  = new Mat();
         Imgproc.findContours(img,contours,hierarchy ,Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -254,5 +195,256 @@ public class utils {
         }
         //rotatedRect.angle = rotatedRect.angle < -45 ? rotatedRect.angle + 90.f : rotatedRect.angle;
         //return rotatedRect.angle;*/
+    }
+
+
+
+
+//    public static Bitmap feedInputToBitmap(Context context,
+//                                     List<byte[]> bytesList,
+//                                     int imageHeight,
+//                                     int imageWidth,
+//                                     int rotation) throws Exception {
+//
+//        ByteBuffer Y = ByteBuffer.wrap(bytesList.get(0));
+//        ByteBuffer U = ByteBuffer.wrap(bytesList.get(1));
+//        ByteBuffer V = ByteBuffer.wrap(bytesList.get(2));
+//
+//        int Yb = Y.remaining();
+//        int Ub = U.remaining();
+//        int Vb = V.remaining();
+//
+//        byte[] data = new byte[Yb + Ub + Vb];
+//        Y.get(data, 0, Yb);
+//        V.get(data, Yb, Vb);
+//        U.get(data, Yb + Vb, Ub);
+//
+//        Bitmap bitmapRaw = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
+//        Allocation bmData = renderScriptNV21ToRGBA888(
+//                context,
+//                imageWidth,
+//                imageHeight,
+//                data);
+//        bmData.copyTo(bitmapRaw);
+//        bmData.destroy();
+//        Matrix matrix = new Matrix();
+//        matrix.postRotate(rotation);
+//        bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
+//        return bitmapRaw;
+//    }
+
+    public static ByteBuffer feedInputTensor(Tensor tensor,
+                                       int byte_per_channel,
+                                       Bitmap bitmapRaw,
+                                       float mean,
+                                       float std) throws Exception {
+        int[] shape = tensor.shape();
+        int inputSize = shape[1];
+        int inputChannels = shape[3];
+        final boolean crop = false;
+        int bytePerChannel = tensor.dataType() == DataType.UINT8 ? 1 : byte_per_channel;
+        ByteBuffer imgData = ByteBuffer.allocateDirect(1 * inputSize * inputSize * inputChannels * bytePerChannel);
+        imgData.order(ByteOrder.nativeOrder());
+        imgData.rewind();
+        //TODO
+        //utils.getScreenshotBmp(bitmapRaw, "antes");
+        Bitmap bitmap = null;
+        //Bitmap newBm = bitmapRaw;
+        //720=720, 1280=width
+        //640*640
+        if (bitmapRaw.getWidth() != inputSize || bitmapRaw.getHeight() != inputSize) {
+            Matrix matrix = getTransformationMatrix(bitmapRaw.getWidth(), bitmapRaw.getHeight(),
+                    inputSize, inputSize, true, crop);
+            if(!crop){
+                //original size bitmap
+                bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(),
+                        matrix, true);
+            }
+            bitmap = Bitmap.createBitmap(inputSize, inputSize, Bitmap.Config.ARGB_8888);
+
+            final Canvas canvas = new Canvas(bitmap);
+
+            //Draw background color
+            Paint paint = new Paint();
+            paint.setColor(Color.rgb(114, 114, 114));
+            paint.setStyle(Paint.Style.FILL);
+            canvas.drawRect(0, 0, canvas.getWidth(),    canvas.getHeight(), paint);
+
+            //Determine the screen position
+            float left = 0;
+            float top = 0;
+            if (bitmapRaw.getWidth() > bitmapRaw.getHeight()){
+                top = (float)((bitmapRaw.getWidth() - bitmapRaw.getHeight()) / 2.0);
+            }
+            else{
+                left = (float)((bitmapRaw.getHeight() - bitmapRaw.getWidth()) / 2.0);
+            }
+            canvas.drawBitmap( bitmapRaw, left , top, null );
+            if (!bitmapRaw.isRecycled()){
+                bitmapRaw.recycle();
+            }
+        }
+
+        //utils.getScreenshotBmp(bitmap, "despues");
+        if (tensor.dataType() == DataType.FLOAT32) {
+            for (int i = 0; i < inputSize; ++i) {
+                for (int j = 0; j < inputSize; ++j) {
+                    int pixelValue = bitmap.getPixel(j, i);
+                    if (inputChannels > 1){
+                        imgData.putFloat((((pixelValue >> 16) & 0xFF) - mean) / std);//red
+                        imgData.putFloat((((pixelValue >> 8) & 0xFF) - mean) / std);//green
+                        imgData.putFloat(((pixelValue & 0xFF) - mean) / std);//blue
+                    } else {
+                        imgData.putFloat((((pixelValue >> 16 | pixelValue >> 8 | pixelValue) & 0xFF) - mean) / std);
+                    }
+                }
+            }
+        } else {
+            //System.out.println("FLOAT16");
+            for (int i = 0; i < inputSize; ++i) {
+                for (int j = 0; j < inputSize; ++j) {
+                    int pixelValue = bitmap.getPixel(j, i);
+                    if (inputChannels > 1){
+                        imgData.put((byte) ((pixelValue >> 16) & 0xFF));
+                        imgData.put((byte) ((pixelValue >> 8) & 0xFF));
+                        imgData.put((byte) (pixelValue & 0xFF));
+                    } else {
+                        imgData.put((byte) ((pixelValue >> 16 | pixelValue >> 8 | pixelValue) & 0xFF));
+                    }
+                }
+            }
+        }
+        if(!bitmap.isRecycled()){
+            bitmap.recycle();
+        }
+        return imgData;
+    }
+    public static Bitmap feedInputToBitmap(Context context,
+                                           List<byte[]> bytesList,
+                                           int imageHeight,
+                                           int imageWidth,
+                                           int rotation) throws Exception {
+
+        ByteBuffer Y = ByteBuffer.wrap(bytesList.get(0));
+        ByteBuffer U = ByteBuffer.wrap(bytesList.get(1));
+        ByteBuffer V = ByteBuffer.wrap(bytesList.get(2));
+
+        int Yb = Y.remaining();
+        int Ub = U.remaining();
+        int Vb = V.remaining();
+
+        byte[] data = new byte[Yb + Ub + Vb];
+        Y.get(data, 0, Yb);
+        V.get(data, Yb, Vb);
+        U.get(data, Yb + Vb, Ub);
+
+        Bitmap bitmapRaw = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
+
+        Allocation bmData = null;
+        try {
+            bmData = renderScriptNV21ToRGBA888(
+                    context,
+                    imageWidth,
+                    imageHeight,
+                    data);
+
+            bmData.copyTo(bitmapRaw);
+            Matrix matrix = new Matrix();
+            matrix.postRotate(rotation);
+            bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
+
+        } finally {
+            if (bmData != null) {
+                bmData.destroy();
+            }
+        }
+
+        return bitmapRaw;
+    }
+
+    private static Allocation renderScriptNV21ToRGBA888(Context context,
+                                                        int width,
+                                                        int height,
+                                                        byte[] nv21) {
+        try{
+            // https://stackoverflow.com/a/36409748
+            RenderScript rs = RenderScript.create(context);
+            ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+
+            Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
+            Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
+
+            Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
+            Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+
+            in.copyFrom(nv21);
+
+            yuvToRgbIntrinsic.setInput(in);
+            yuvToRgbIntrinsic.forEach(out);
+
+            rs.destroy();
+            rs.finish();
+            in.destroy();
+            return out;
+        }
+        catch (Exception e){
+            throw new RuntimeException("render script error: "+e);
+        }
+    }
+//    private static Allocation renderScriptNV21ToRGBA888(Context context,
+//                                                 int width,
+//                                                 int height,
+//                                                 byte[] nv21) {
+//        try{
+//            // https://stackoverflow.com/a/36409748
+//            RenderScript rs = RenderScript.create(context);
+//            ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+//
+//            Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
+//            Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
+//
+//            Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
+//            Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+//
+//            in.copyFrom(nv21);
+//
+//            yuvToRgbIntrinsic.setInput(in);
+//            yuvToRgbIntrinsic.forEach(out);
+//
+//            rs.destroy();
+//            rs.finish();
+//            in.destroy();
+//            return out;
+//        }
+//        catch (Exception e){
+//            throw new RuntimeException("render script error: "+e);
+//        }
+//    }
+
+    private static Matrix getTransformationMatrix(final int srcWidth,
+                                                  final int srcHeight,
+                                                  final int dstWidth,
+                                                  final int dstHeight,
+                                                  final boolean maintainAspectRatio,
+                                                  final boolean crop) {
+        final Matrix matrix = new Matrix();
+
+        if (srcWidth != dstWidth || srcHeight != dstHeight) {
+            final float scaleFactorX = dstWidth / (float) srcWidth;
+            final float scaleFactorY = dstHeight / (float) srcHeight;
+
+            if (maintainAspectRatio && crop) {
+                final float scaleFactor = Math.max(scaleFactorX, scaleFactorY);
+                matrix.postScale(scaleFactor, scaleFactor);
+            }else if(maintainAspectRatio){
+                final float scaleFactor = min(scaleFactorX, scaleFactorY);
+                matrix.postScale(scaleFactor, scaleFactor);
+            }
+            else {
+                matrix.postScale(scaleFactorX, scaleFactorY);
+            }
+        }
+        matrix.invert(new Matrix());
+        return matrix;
     }
 }

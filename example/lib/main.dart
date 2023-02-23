@@ -31,7 +31,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late CameraController controller;
   late FlutterVision vision;
-  late List<Map<String, dynamic>> modelResults;
+  late List<Map<String, dynamic>> yoloResults;
+  CameraImage? cameraImage;
   bool isLoaded = false;
   bool isDetecting = false;
   @override
@@ -49,7 +50,7 @@ class _MyAppState extends State<MyApp> {
             setState(() {
               isLoaded = true;
               isDetecting = false;
-              modelResults = [];
+              yoloResults = [];
             });
           });
           break;
@@ -58,7 +59,7 @@ class _MyAppState extends State<MyApp> {
             setState(() {
               isLoaded = true;
               isDetecting = false;
-              modelResults = [];
+              yoloResults = [];
             });
           });
           break;
@@ -87,114 +88,77 @@ class _MyAppState extends State<MyApp> {
       );
     }
     return Scaffold(
-      body: modelResults.isEmpty
-          ? Stack(
-              fit: StackFit.expand,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AspectRatio(
+            aspectRatio: controller.value.aspectRatio,
+            child: CameraPreview(
+              controller,
+            ),
+          ),
+          ColorFiltered(
+            colorFilter: ColorFilter.mode(
+                Colors.black.withOpacity(0.7), BlendMode.srcOut),
+            child: Stack(
               children: [
-                AspectRatio(
-                  aspectRatio: controller.value.aspectRatio,
-                  child: CameraPreview(
-                    controller,
-                  ),
+                Container(
+                  decoration: const BoxDecoration(
+                      color: Colors.black,
+                      backgroundBlendMode: BlendMode.dstOut),
                 ),
-                ColorFiltered(
-                  colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.7), BlendMode.srcOut),
-                  child: Stack(
-                    children: [
-                      Container(
-                        decoration: const BoxDecoration(
-                            color: Colors.black,
-                            backgroundBlendMode: BlendMode.dstOut),
-                      ),
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: Container(
-                          margin: EdgeInsets.only(top: size.height * 0.2),
-                          height: size.height * 0.30,
-                          width: size.width * 0.9,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  bottom: 75,
-                  width: MediaQuery.of(context).size.width,
+                Align(
+                  alignment: Alignment.topCenter,
                   child: Container(
-                    height: 80,
-                    width: 80,
+                    margin: EdgeInsets.only(top: size.height * 0.2),
+                    height: size.height * 0.30,
+                    width: size.width * 0.9,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          width: 5,
-                          color: Colors.white,
-                          style: BorderStyle.solid),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: isDetecting
-                        ? IconButton(
-                            onPressed: () async {
-                              stopImageStream();
-                            },
-                            icon: const Icon(
-                              Icons.stop,
-                              color: Colors.red,
-                            ),
-                            iconSize: 50,
-                          )
-                        : IconButton(
-                            onPressed: () async {
-                              await startImageStream();
-                            },
-                            icon: const Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                            ),
-                            iconSize: 50,
-                          ),
                   ),
                 ),
               ],
-            )
-          : ListView.builder(
-              shrinkWrap: true,
-              itemCount: modelResults.length,
-              itemBuilder: (context, index) {
-                Map<String, dynamic> result = modelResults[index];
-                return Card(
-                  child: Column(
-                    children: [
-                      Text(
-                        result['tag'].toString().toUpperCase(),
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 6),
-                      Image.memory(result['image'] as Uint8List),
-                      const SizedBox(height: 6),
-                      if (widget.model == Models.ocr)
-                        Visibility(
-                          visible: (result['text'] as String) != "None",
-                          child: Column(
-                            children: [
-                              const Text(
-                                "Image as text:",
-                                style: TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                              Text((result['text'] as String))
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
             ),
+          ),
+          ...displayBoxesAroundRecognizedObjects(size),
+          Positioned(
+            bottom: 75,
+            width: MediaQuery.of(context).size.width,
+            child: Container(
+              height: 80,
+              width: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                    width: 5, color: Colors.white, style: BorderStyle.solid),
+              ),
+              child: isDetecting
+                  ? IconButton(
+                      onPressed: () async {
+                        stopImageStream();
+                      },
+                      icon: const Icon(
+                        Icons.stop,
+                        color: Colors.red,
+                      ),
+                      iconSize: 50,
+                    )
+                  : IconButton(
+                      onPressed: () async {
+                        await startImageStream();
+                      },
+                      icon: const Icon(
+                        Icons.play_arrow,
+                        color: Colors.white,
+                      ),
+                      iconSize: 50,
+                    ),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await stopImageStream();
@@ -205,7 +169,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> loadOcrModel() async {
-    final responseHandler = await vision.loadOcrModel(
+    await vision.loadOcrModel(
         labels: 'assets/labels.txt',
         modelPath: 'assets/best-fp16.tflite',
         args: {
@@ -216,44 +180,40 @@ class _MyAppState extends State<MyApp> {
         language: 'spa',
         numThreads: 1,
         useGpu: false);
-    if (responseHandler.type != 'success') {
-      setState(() {
-        isLoaded = true;
-      });
-    }
+    setState(() {
+      isLoaded = true;
+    });
   }
 
   Future<void> loadYoloModel() async {
-    final responseHandler = await vision.loadYoloModel(
+    await vision.loadYoloModel(
         labels: 'assets/labels.txt',
         modelPath: 'assets/best-fp16.tflite',
         numThreads: 1,
         useGpu: false);
-    if (responseHandler.type != 'success') {
-      setState(() {
-        isLoaded = true;
-      });
-    }
+    setState(() {
+      isLoaded = true;
+    });
   }
 
   Future<void> startImageStream() async {
     if (!controller.value.isInitialized) {
-      print('controller not initialized');
       return;
     }
+    setState(() {
+      isDetecting = true;
+    });
     await controller.startImageStream((image) async {
-      if (isDetecting) {
-        return;
-      }
-      setState(() {
-        isDetecting = true;
-      });
+      // if (isDetecting) {
+      //   return;
+      // }
+      cameraImage = image;
       switch (widget.model) {
         case Models.ocr:
-          await ocrOnFrame(image);
+          ocrOnFrame(image);
           break;
         case Models.yolov5:
-          await yoloOnFrame(image);
+          yoloOnFrame(image);
           break;
         default:
           break;
@@ -263,19 +223,17 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> stopImageStream() async {
     if (!controller.value.isInitialized) {
-      print('controller not initialized');
       return;
     }
     if (controller.value.isStreamingImages) {
       await controller.stopImageStream();
     }
     setState(() {
-      isDetecting = false;
-      modelResults.clear();
+      yoloResults.clear();
     });
   }
 
-  Future<void> ocrOnFrame(CameraImage cameraImage) async {
+  ocrOnFrame(CameraImage cameraImage) async {
     final result = await vision.ocrOnFrame(
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,
@@ -284,19 +242,57 @@ class _MyAppState extends State<MyApp> {
         iouThreshold: 0.6,
         confThreshold: 0.6);
     setState(() {
-      modelResults = result.data as List<Map<String, dynamic>>;
+      yoloResults = result;
     });
   }
 
-  Future<void> yoloOnFrame(CameraImage cameraImage) async {
+  yoloOnFrame(CameraImage cameraImage) async {
     final result = await vision.yoloOnFrame(
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,
         imageWidth: cameraImage.width,
         iouThreshold: 0.6,
         confThreshold: 0.6);
-    setState(() {
-      modelResults = result.data as List<Map<String, dynamic>>;
-    });
+    if (result.isNotEmpty) {
+      setState(() {
+        yoloResults = result;
+      });
+    }
+  }
+
+  List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
+    if (yoloResults.isEmpty) return [];
+
+    double factorX = screen.width / (cameraImage?.width ?? 1);
+    double factorY = screen.height / (cameraImage?.height ?? 1);
+
+    Color colorPick = Color.fromARGB(255, 50, 233, 30);
+
+    return yoloResults.map((result) {
+      print(result["box"][0] * factorX);
+      print(result["box"][1] * factorY);
+      print(result["box"][2] * factorX);
+      print(result["box"][3] * factorY);
+      return Positioned(
+        left: result["box"][0] * factorX,
+        top: result["box"][1] * factorY,
+        right: result["box"][2] * factorX,
+        bottom: result["box"][3] * factorY,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(10.0)),
+            border: Border.all(color: Colors.pink, width: 2.0),
+          ),
+          child: Text(
+            "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}%",
+            style: TextStyle(
+              background: Paint()..color = colorPick,
+              color: Colors.white,
+              fontSize: 18.0,
+            ),
+          ),
+        ),
+      );
+    }).toList();
   }
 }

@@ -5,8 +5,6 @@ import 'package:path/path.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../utils/response_handler.dart';
-
 abstract class BaseFlutterVision {
   // ignore: constant_identifier_names
   static const String TESS_DATA_CONFIG = 'assets/tessdata_config.json';
@@ -14,14 +12,6 @@ abstract class BaseFlutterVision {
   static const String TESS_DATA_PATH = 'assets/tessdata';
   static const MethodChannel _channel = MethodChannel('flutter_vision');
   MethodChannel get channel => _channel;
-
-  Future<ResponseHandler> loadOcrModel(
-      {required String modelPath,
-      required String labels,
-      int? numThreads,
-      bool? useGpu,
-      String? language,
-      Map<String, String>? args});
 
   Future<String> loadTessData() async {
     try {
@@ -53,7 +43,15 @@ abstract class BaseFlutterVision {
     }
   }
 
-  Future<ResponseHandler> ocrOnFrame({
+  Future<void> loadOcrModel(
+      {required String modelPath,
+      required String labels,
+      int? numThreads,
+      bool? useGpu,
+      String? language,
+      Map<String, String>? args});
+
+  Future<List<Map<String, dynamic>>> ocrOnFrame({
     required List<Uint8List> bytesList,
     required int imageHeight,
     required int imageWidth,
@@ -66,15 +64,23 @@ abstract class BaseFlutterVision {
     await channel.invokeMethod('closeOcrModel');
   }
 
-  Future<ResponseHandler> loadYoloModel({
+  Future<void> loadYoloModel({
     required String modelPath,
     required String labels,
     int? numThreads,
     bool? useGpu,
   });
 
-  Future<ResponseHandler> yoloOnFrame({
+  Future<List<Map<String, dynamic>>> yoloOnFrame({
     required List<Uint8List> bytesList,
+    required int imageHeight,
+    required int imageWidth,
+    double? iouThreshold,
+    double? confThreshold,
+  });
+
+  Future<List<Map<String, dynamic>>> yoloOnImage({
+    required Uint8List bytesList,
     required int imageHeight,
     required int imageWidth,
     double? iouThreshold,
@@ -83,5 +89,14 @@ abstract class BaseFlutterVision {
 
   Future<void> closeYoloModel() async {
     await channel.invokeMethod('closeYoloModel');
+  }
+
+  Future<void> loadTesseractModel(
+      {String? language, Map<String, String>? args});
+
+  Future<List<String>> tesseractOnImage({required Uint8List bytesList});
+
+  Future<void> closeTesseractModel() async {
+    await channel.invokeMethod('closeTesseractModel');
   }
 }

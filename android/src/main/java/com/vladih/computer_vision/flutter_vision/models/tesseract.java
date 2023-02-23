@@ -1,9 +1,9 @@
 package com.vladih.computer_vision.flutter_vision.models;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 import com.googlecode.tesseract.android.TessBaseAPI;
-import com.vladih.computer_vision.flutter_vision.utils.responses;
 import com.vladih.computer_vision.flutter_vision.utils.utils;
 
 import org.opencv.android.Utils;
@@ -14,9 +14,6 @@ import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.photo.Photo;
-import org.tensorflow.lite.Interpreter;
-
-import java.io.IOException;
 import java.util.Map;
 
 public class tesseract {
@@ -31,35 +28,37 @@ public class tesseract {
         this.arg = arg;
         this.language = language;
     }
-    public TessBaseAPI getModel() {return this.interpreter;};
     public void close(){
         if (interpreter!=null){
             interpreter.clear();
             interpreter.recycle();
         }
     }
-    public responses initialize_model() throws IOException {
+    public void initialize_model() throws Exception {
         try {
             if(interpreter==null){
                 this.interpreter = new TessBaseAPI();
-                this.interpreter.init(this.tess_data, this.language);
-            }
-            if(!this.arg.isEmpty()){
-                for(Map.Entry<String, String> entry:this.arg.entrySet()){
-                    interpreter.setVariable(entry.getKey(),entry.getValue());
+                if (!this.interpreter.init(this.tess_data, this.language)) {
+                    // Error initializing Tesseract (wrong data path or language)
+                    this.interpreter.recycle();
+                    throw new Exception("Cannot initialize tesseract model");
                 }
+                if(!this.arg.isEmpty()){
+                    for(Map.Entry<String, String> entry:this.arg.entrySet()){
+                        interpreter.setVariable(entry.getKey(),entry.getValue());
+                    }
+                }
+                interpreter.setPageSegMode(this.default_page_seg_mode);
             }
-            interpreter.setPageSegMode(this.default_page_seg_mode);
-            return  responses.success("Tesseract model loaded success");
         }
         catch (Exception e){
-            return responses.error("Cannot initialize tesseract model: "+e.getMessage());
+            throw e;
         }
     }
 
     public String predict_text(Bitmap bitmap) throws Exception {
         try{
-            this.interpreter.clear();
+            //this.interpreter.clear();
             //Mat mat=preprocess_bitmap(bitmap);
             //bitmap = min_300dpi(mat);
             Mat mat = min_300dpi(bitmap);
@@ -73,7 +72,36 @@ public class tesseract {
             for(int i: this.interpreter.wordConfidences()){
                 System.out.println(i);
             }
-            this.interpreter.stop();
+            //this.interpreter.stop();
+            return result;
+        }catch (Exception e){
+            throw new Exception(e.getMessage());
+        }finally {
+            if(!bitmap.isRecycled()){
+                bitmap.recycle();
+            }
+        }
+    }
+
+    public String predict_text(byte[] image) throws Exception {
+        Bitmap bitmap = null;
+        try{
+            //this.interpreter.clear();
+            //Mat mat=preprocess_bitmap(bitmap);
+            //bitmap = min_300dpi(mat);
+            bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
+            Mat mat = min_300dpi(bitmap);
+            bitmap=preprocess_bitmap(mat);
+            //utils.getScreenshotBmp(bitmap, "preprocess");
+            this.interpreter.setImage(bitmap);
+            String result = this.interpreter.getUTF8Text();
+            System.out.println("++++++++++++++++mean confidence++++++++++++++++++++");
+            System.out.println(this.interpreter.meanConfidence());
+            System.out.println("=============word confidence==============");
+            for(int i: this.interpreter.wordConfidences()){
+                System.out.println(i);
+            }
+            //this.interpreter.stop();
             return result;
         }catch (Exception e){
             throw new Exception(e.getMessage());
