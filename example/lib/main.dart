@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    controller = CameraController(cameras[0], ResolutionPreset.max);
+    controller = CameraController(cameras[0], ResolutionPreset.low);
     controller.initialize().then((_) {
       if (!mounted) {
         return;
@@ -187,8 +187,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
-        labels: 'assets/labels.txt',
-        modelPath: 'assets/best-fp16.tflite',
+        labels: 'assets/labelss.txt',
+        modelPath: 'assets/yolov8n.tflite',
         numThreads: 1,
         useGpu: false);
     setState(() {
@@ -247,6 +247,9 @@ class _MyAppState extends State<MyApp> {
   }
 
   yoloOnFrame(CameraImage cameraImage) async {
+    print("88888888888888888888");
+    print(cameraImage.height);
+    print(cameraImage.width);
     final result = await vision.yoloOnFrame(
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,

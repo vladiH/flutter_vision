@@ -6,8 +6,10 @@ import android.graphics.BitmapFactory;
 
 import androidx.annotation.NonNull;
 
+import com.vladih.computer_vision.flutter_vision.models.Yolo;
+import com.vladih.computer_vision.flutter_vision.models.Yolov8;
 import com.vladih.computer_vision.flutter_vision.models.tesseract;
-import com.vladih.computer_vision.flutter_vision.models.yolov5;
+import com.vladih.computer_vision.flutter_vision.models.Yolov5;
 import com.vladih.computer_vision.flutter_vision.utils.utils;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -34,7 +36,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private MethodChannel methodChannel;
   private Context context;
   private  FlutterAssets assets;
-  private yolov5 yolov5;
+  private Yolo yolo;
   private tesseract tesseract;
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
@@ -72,7 +74,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       close_ocr_model(result);
     }else if(call.method.equals("loadYoloModel")){
       try {
-        yolov5 = load_yolo_model((Map) call.arguments);
+        yolo = load_yolo_model((Map) call.arguments);
         result.success("ok");
       } catch (Exception e) {
         result.error("100","Error on load Yolov5 model", e);
@@ -99,7 +101,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     }
   }
   private void load_ocr_model(Map<String, Object> args) throws Exception {
-    yolov5 = load_yolo_model(args);
+    yolo = load_yolo_model(args);
     tesseract = load_tesseract_model(args);
   }
 
@@ -112,8 +114,8 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
       List<Integer> class_is_text = (List<Integer>) args.get("class_is_text");
       Bitmap bitmap = utils.feedInputToBitmap(context.getApplicationContext(),image,image_height, image_width, 90);
-      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolov5.getInputTensor(),4,bitmap,0,255);
-      List<Map<String, Object>> yolo_results =  yolov5.detectOnFrame(byteBuffer, image_height, image_width, iou_threshold, conf_threshold);
+      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolo.getInputTensor(),4,bitmap,0,255);
+      List<Map<String, Object>> yolo_results =  yolo.detectOnFrame(byteBuffer, image_height, image_width, iou_threshold, conf_threshold);
       for (Map<String, Object> yolo_result:yolo_results) {
         float [] box = (float[]) yolo_result.get("box");
         if(class_is_text.contains((int)box[5])){
@@ -134,7 +136,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
   private void close_ocr_model(Result result){
     try {
-      yolov5.close();
+      yolo.close();
       tesseract.close();
       result.success("OCR model closed succesfully");
     }catch (Exception e){
@@ -142,7 +144,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     }
   }
 
-  private yolov5 load_yolo_model(Map<String, Object> args) throws Exception {
+  private Yolo load_yolo_model(Map<String, Object> args) throws Exception {
     final String model = this.assets.getAssetFilePathByName(args.get("model_path").toString());
     final Object is_asset_obj = args.get("is_asset");
     final boolean is_asset = is_asset_obj==null?false:(boolean) is_asset_obj;
@@ -152,7 +154,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 //      final float image_mean= (float)((double) args.get("image_mean"));
 //      final float image_std= (float)((double) args.get("image_std"));
     final int rotation= (int) args.get("rotation");
-    yolov5 yolo = new yolov5(
+    Yolo yolo = new Yolov8(
             context,
             model,
             is_asset,
@@ -165,17 +167,24 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   }
 
   private void yolo_on_frame(Map<String, Object> args, Result result){
+    Bitmap bitmap = null;
     try {
       List<byte[]> image = (ArrayList) args.get("bytesList");
       int image_height = (int) args.get("image_height");
       int image_width = (int) args.get("image_width");
       float iou_threshold = (float)(double)( args.get("iou_threshold"));
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
-      Bitmap bitmap = utils.feedInputToBitmap(context,image,image_height, image_width, 90);
-      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolov5.getInputTensor(),4,bitmap,0,255);
-      result.success(yolov5.detectOnFrame(byteBuffer, image_height, image_width, iou_threshold, conf_threshold));
+      //invert width with height, because android take a photo rotating 90 degrees
+      bitmap = utils.feedInputToBitmap(context,image,image_height, image_width, 90);
+      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolo.getInputTensor(),4,bitmap,0,255);
+      result.success(yolo.detectOnFrame(byteBuffer, bitmap.getHeight(), bitmap.getWidth(), iou_threshold, conf_threshold));
     }catch (Exception e){
       result.error("100", "Detection Error", e);
+    }finally {
+      assert bitmap != null;
+      if(!bitmap.isRecycled()){
+        bitmap.recycle();
+      }
     }
   }
 
@@ -187,15 +196,15 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float iou_threshold = (float)(double)( args.get("iou_threshold"));
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
       Bitmap bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
-      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolov5.getInputTensor(),4,bitmap,0,255);
-      result.success(yolov5.detectOnImage(byteBuffer, image_height, image_width, iou_threshold, conf_threshold));
+      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolo.getInputTensor(),4,bitmap,0,255);
+      result.success(yolo.detectOnImage(byteBuffer, image_height, image_width, iou_threshold, conf_threshold));
     }catch (Exception e){
       result.error("100", "Detection Error", e);
     }
   }
 
   private void close_yolo_model(Result result){
-    yolov5.close();
+    yolo.close();
     result.success("Yolo model closed succesfully");
   }
 

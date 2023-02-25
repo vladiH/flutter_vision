@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.os.Environment;
@@ -26,6 +27,11 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.tensorflow.lite.DataType;
 import org.tensorflow.lite.Tensor;
+import org.tensorflow.lite.support.image.ImageProcessor;
+import org.tensorflow.lite.support.image.TensorImage;
+import org.tensorflow.lite.support.image.ops.ResizeOp;
+import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp;
+import org.tensorflow.lite.support.image.ops.Rot90Op;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -111,8 +117,6 @@ public class utils {
         return stream.toByteArray();
     }
     public static Bitmap getScreenshotBmp(Bitmap bitmap, String name) {
-
-
         FileOutputStream fileOutputStream = null;
 
         File path = Environment
@@ -167,71 +171,8 @@ public class utils {
         RotatedRect rotatedRect = Imgproc.minAreaRect(dst);
         rotatedRect.angle = rotatedRect.angle < -45 ? rotatedRect.angle + 90.f : rotatedRect.angle;
         return rotatedRect.angle;
-        /*//Find all white pixels
-        Mat wLocMat = Mat.zeros(img.size(),img.type());
-        Core.findNonZero(img, wLocMat);
-        //Create an empty Mat and pass it to the function
-        MatOfPoint matOfPoint = new MatOfPoint( wLocMat );
-        if(matOfPoint.empty()){
-            return 361;
-        }
-        //Translate MatOfPoint to MatOfPoint2f in order to user at a next step
-        MatOfPoint2f mat2f = new MatOfPoint2f();
-        matOfPoint.convertTo(mat2f, CvType.CV_32FC2);
-
-        //Get rotated rect of white pixels
-        RotatedRect rotatedRect = Imgproc.minAreaRect( mat2f );
-        Point[] vertices = new Point[4];
-        rotatedRect.points(vertices);
-        List<MatOfPoint> boxContours = new ArrayList<>();
-        boxContours.add(new MatOfPoint(vertices));
-        Imgproc.drawContours( img, boxContours, 0, new Scalar(128, 128, 128), 1);
-        Bitmap bmp = Bitmap.createBitmap((int)img.width(), (int)img.height(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(img, bmp);
-        //double resultAngle = rotatedRect.angle;
-        if (rotatedRect.size.width > rotatedRect.size.height)
-        {
-            rotatedRect.angle += 90.f;
-        }
-        //rotatedRect.angle = rotatedRect.angle < -45 ? rotatedRect.angle + 90.f : rotatedRect.angle;
-        //return rotatedRect.angle;*/
     }
 
-
-
-
-//    public static Bitmap feedInputToBitmap(Context context,
-//                                     List<byte[]> bytesList,
-//                                     int imageHeight,
-//                                     int imageWidth,
-//                                     int rotation) throws Exception {
-//
-//        ByteBuffer Y = ByteBuffer.wrap(bytesList.get(0));
-//        ByteBuffer U = ByteBuffer.wrap(bytesList.get(1));
-//        ByteBuffer V = ByteBuffer.wrap(bytesList.get(2));
-//
-//        int Yb = Y.remaining();
-//        int Ub = U.remaining();
-//        int Vb = V.remaining();
-//
-//        byte[] data = new byte[Yb + Ub + Vb];
-//        Y.get(data, 0, Yb);
-//        V.get(data, Yb, Vb);
-//        U.get(data, Yb + Vb, Ub);
-//
-//        Bitmap bitmapRaw = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
-//        Allocation bmData = renderScriptNV21ToRGBA888(
-//                context,
-//                imageWidth,
-//                imageHeight,
-//                data);
-//        bmData.copyTo(bitmapRaw);
-//        bmData.destroy();
-//        Matrix matrix = new Matrix();
-//        matrix.postRotate(rotation);
-//        bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
-//        return bitmapRaw;
-//    }
 
     public static ByteBuffer feedInputTensor(Tensor tensor,
                                        int byte_per_channel,
@@ -240,84 +181,22 @@ public class utils {
                                        float std) throws Exception {
         int[] shape = tensor.shape();
         int inputSize = shape[1];
-        int inputChannels = shape[3];
-        final boolean crop = false;
-        int bytePerChannel = tensor.dataType() == DataType.UINT8 ? 1 : byte_per_channel;
-        ByteBuffer imgData = ByteBuffer.allocateDirect(1 * inputSize * inputSize * inputChannels * bytePerChannel);
-        imgData.order(ByteOrder.nativeOrder());
-        imgData.rewind();
-        //TODO
-        //utils.getScreenshotBmp(bitmapRaw, "antes");
-        Bitmap bitmap = null;
-        //Bitmap newBm = bitmapRaw;
-        //720=720, 1280=width
-        //640*640
-        if (bitmapRaw.getWidth() != inputSize || bitmapRaw.getHeight() != inputSize) {
-            Matrix matrix = getTransformationMatrix(bitmapRaw.getWidth(), bitmapRaw.getHeight(),
-                    inputSize, inputSize, true, crop);
-            if(!crop){
-                //original size bitmap
-                bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(),
-                        matrix, true);
-            }
-            bitmap = Bitmap.createBitmap(inputSize, inputSize, Bitmap.Config.ARGB_8888);
-
-            final Canvas canvas = new Canvas(bitmap);
-
-            //Draw background color
-            Paint paint = new Paint();
-            paint.setColor(Color.rgb(114, 114, 114));
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawRect(0, 0, canvas.getWidth(),    canvas.getHeight(), paint);
-
-            //Determine the screen position
-            float left = 0;
-            float top = 0;
-            if (bitmapRaw.getWidth() > bitmapRaw.getHeight()){
-                top = (float)((bitmapRaw.getWidth() - bitmapRaw.getHeight()) / 2.0);
-            }
-            else{
-                left = (float)((bitmapRaw.getHeight() - bitmapRaw.getWidth()) / 2.0);
-            }
-            canvas.drawBitmap( bitmapRaw, left , top, null );
-            if (!bitmapRaw.isRecycled()){
-                bitmapRaw.recycle();
-            }
-        }
-
-        //utils.getScreenshotBmp(bitmap, "despues");
-        if (tensor.dataType() == DataType.FLOAT32) {
-            for (int i = 0; i < inputSize; ++i) {
-                for (int j = 0; j < inputSize; ++j) {
-                    int pixelValue = bitmap.getPixel(j, i);
-                    if (inputChannels > 1){
-                        imgData.putFloat((((pixelValue >> 16) & 0xFF) - mean) / std);//red
-                        imgData.putFloat((((pixelValue >> 8) & 0xFF) - mean) / std);//green
-                        imgData.putFloat(((pixelValue & 0xFF) - mean) / std);//blue
-                    } else {
-                        imgData.putFloat((((pixelValue >> 16 | pixelValue >> 8 | pixelValue) & 0xFF) - mean) / std);
-                    }
-                }
-            }
-        } else {
-            //System.out.println("FLOAT16");
-            for (int i = 0; i < inputSize; ++i) {
-                for (int j = 0; j < inputSize; ++j) {
-                    int pixelValue = bitmap.getPixel(j, i);
-                    if (inputChannels > 1){
-                        imgData.put((byte) ((pixelValue >> 16) & 0xFF));
-                        imgData.put((byte) ((pixelValue >> 8) & 0xFF));
-                        imgData.put((byte) (pixelValue & 0xFF));
-                    } else {
-                        imgData.put((byte) ((pixelValue >> 16 | pixelValue >> 8 | pixelValue) & 0xFF));
-                    }
-                }
-            }
-        }
-        if(!bitmap.isRecycled()){
-            bitmap.recycle();
-        }
-        return imgData;
+        utils.getScreenshotBmp(bitmapRaw, "antes");
+        TensorImage tensorImage = new TensorImage(DataType.FLOAT32);
+        tensorImage.load(bitmapRaw);
+        ImageProcessor imageProcessor =
+                new ImageProcessor.Builder()
+                        // Center crop the image to the largest square possible
+                        .add(new ResizeWithCropOrPadOp(inputSize, inputSize))
+                        // Resize using Bilinear or Nearest neighbour
+                        .add(new ResizeOp(inputSize, inputSize, ResizeOp.ResizeMethod.BILINEAR))
+                        // Rotation counter-clockwise in 90 degree increments
+//                        .add(new Rot90Op(rotateDegrees / 90))
+//                                .add(new NormalizeOp(127.5, 127.5))
+//                                .add(new QuantizeOp(128.0, 1/128.0))
+                                .build();
+        utils.getScreenshotBmp(imageProcessor.process(tensorImage).getBitmap(), "despues");
+        return imageProcessor.process(tensorImage).getBuffer();
     }
     public static Bitmap feedInputToBitmap(Context context,
                                            List<byte[]> bytesList,
@@ -325,126 +204,73 @@ public class utils {
                                            int imageWidth,
                                            int rotation) throws Exception {
 
-        ByteBuffer Y = ByteBuffer.wrap(bytesList.get(0));
-        ByteBuffer U = ByteBuffer.wrap(bytesList.get(1));
-        ByteBuffer V = ByteBuffer.wrap(bytesList.get(2));
+        int Yb = bytesList.get(0).length;
+        int Ub = bytesList.get(1).length ;
+        int Vb = bytesList.get(2).length ;
+        // Copy YUV data to input allocation
+        byte[] data = new byte[Yb+Ub+Vb];
+        System.arraycopy(bytesList.get(0), 0, data, 0, Yb);
+        System.arraycopy(bytesList.get(2), 0, data, Yb, Ub);
+        System.arraycopy(bytesList.get(1), 0, data, Yb+Ub, Vb);
 
-        int Yb = Y.remaining();
-        int Ub = U.remaining();
-        int Vb = V.remaining();
-
-        byte[] data = new byte[Yb + Ub + Vb];
-        Y.get(data, 0, Yb);
-        V.get(data, Yb, Vb);
-        U.get(data, Yb + Vb, Ub);
-
-        Bitmap bitmapRaw = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
-
-        Allocation bmData = null;
-        try {
-            bmData = renderScriptNV21ToRGBA888(
-                    context,
-                    imageWidth,
-                    imageHeight,
-                    data);
-
-            bmData.copyTo(bitmapRaw);
-            Matrix matrix = new Matrix();
-            matrix.postRotate(rotation);
-            bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
-
-        } finally {
-            if (bmData != null) {
-                bmData.destroy();
-            }
-        }
-
+        Bitmap bitmapRaw = RenderScriptHelper.getBitmapFromNV21(context,data, imageWidth, imageHeight);
+        utils.getScreenshotBmp(bitmapRaw, "NV21");
+        Matrix matrix = new Matrix();
+        matrix.postRotate(rotation);
+        bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
         return bitmapRaw;
     }
-
-    private static Allocation renderScriptNV21ToRGBA888(Context context,
-                                                        int width,
-                                                        int height,
-                                                        byte[] nv21) {
+    public static Bitmap convertYuvToBitmap(Context context, List<byte[]> bytesList, int imageWidth, int imageHeight, int rotation) {
         try{
-            // https://stackoverflow.com/a/36409748
             RenderScript rs = RenderScript.create(context);
-            ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
 
-            Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
-            Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
+            // Create an Element for the YVU type
+            Element yvuType = Element.createPixel(rs, Element.DataType.UNSIGNED_8, Element.DataKind.PIXEL_YUV);
+            Type.Builder yvuTypeBuilder = new Type.Builder(rs, yvuType);
+            yvuTypeBuilder.setX(imageWidth).setY(imageHeight).setYuvFormat(ImageFormat.YV12);
+            Type yvuTypeYV12 = yvuTypeBuilder.create();
 
-            Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
-            Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+            // Create input allocation for YVU data
+            int ySize = bytesList.get(0).length;
+            int vuSize = bytesList.get(1).length + bytesList.get(2).length;
+            int inputAllocationSize = ySize + vuSize;
+            Allocation inputAllocation = Allocation.createSized(rs, yvuTypeYV12.getElement(), inputAllocationSize);
 
-            in.copyFrom(nv21);
+            // Copy YUV data to input allocation
+            byte[] data = new byte[bytesList.get(0).length + bytesList.get(1).length + bytesList.get(2).length];
+            System.arraycopy(bytesList.get(0), 0, data, 0, bytesList.get(0).length);
+            System.arraycopy(bytesList.get(1), 0, data, bytesList.get(0).length, bytesList.get(1).length);
+            System.arraycopy(bytesList.get(2), 0, data, bytesList.get(0).length + bytesList.get(1).length, bytesList.get(2).length);
+            inputAllocation.copyFrom(data);
 
-            yuvToRgbIntrinsic.setInput(in);
-            yuvToRgbIntrinsic.forEach(out);
+            // Create output allocation for RGBA data
+            Type.Builder rgbaTypeBuilder = new Type.Builder(rs, Element.RGBA_8888(rs));
+            rgbaTypeBuilder.setX(imageWidth).setY(imageHeight);
+            Allocation outputAllocation = Allocation.createTyped(rs, rgbaTypeBuilder.create(), Allocation.USAGE_SCRIPT);
 
+            // Convert YUV to RGBA using RenderScript intrinsic
+            ScriptIntrinsicYuvToRGB yuvToRgb = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
+            yuvToRgb.setInput(inputAllocation);
+            yuvToRgb.forEach(outputAllocation);
+
+            // Copy RGBA data to Bitmap
+            Bitmap bitmap = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
+            outputAllocation.copyTo(bitmap);
+
+            // Rotate the Bitmap if necessary
+            Matrix matrix = new Matrix();
+            matrix.postRotate(rotation);
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+
+            // Release resources
+            inputAllocation.destroy();
+            outputAllocation.destroy();
+            yuvToRgb.destroy();
             rs.destroy();
-            rs.finish();
-            in.destroy();
-            return out;
+            utils.getScreenshotBmp(bitmap, "NV21");
+            return bitmap;
+        }catch (Exception e){
+            throw e;
         }
-        catch (Exception e){
-            throw new RuntimeException("render script error: "+e);
-        }
-    }
-//    private static Allocation renderScriptNV21ToRGBA888(Context context,
-//                                                 int width,
-//                                                 int height,
-//                                                 byte[] nv21) {
-//        try{
-//            // https://stackoverflow.com/a/36409748
-//            RenderScript rs = RenderScript.create(context);
-//            ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
-//
-//            Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
-//            Allocation in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
-//
-//            Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
-//            Allocation out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
-//
-//            in.copyFrom(nv21);
-//
-//            yuvToRgbIntrinsic.setInput(in);
-//            yuvToRgbIntrinsic.forEach(out);
-//
-//            rs.destroy();
-//            rs.finish();
-//            in.destroy();
-//            return out;
-//        }
-//        catch (Exception e){
-//            throw new RuntimeException("render script error: "+e);
-//        }
-//    }
-
-    private static Matrix getTransformationMatrix(final int srcWidth,
-                                                  final int srcHeight,
-                                                  final int dstWidth,
-                                                  final int dstHeight,
-                                                  final boolean maintainAspectRatio,
-                                                  final boolean crop) {
-        final Matrix matrix = new Matrix();
-
-        if (srcWidth != dstWidth || srcHeight != dstHeight) {
-            final float scaleFactorX = dstWidth / (float) srcWidth;
-            final float scaleFactorY = dstHeight / (float) srcHeight;
-
-            if (maintainAspectRatio && crop) {
-                final float scaleFactor = Math.max(scaleFactorX, scaleFactorY);
-                matrix.postScale(scaleFactor, scaleFactor);
-            }else if(maintainAspectRatio){
-                final float scaleFactor = min(scaleFactorX, scaleFactorY);
-                matrix.postScale(scaleFactor, scaleFactor);
-            }
-            else {
-                matrix.postScale(scaleFactorX, scaleFactorY);
-            }
-        }
-        matrix.invert(new Matrix());
-        return matrix;
     }
 }
