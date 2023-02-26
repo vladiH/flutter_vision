@@ -38,15 +38,17 @@ public class RenderScriptHelper {
         if (rgbaType == null) {
             rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
         }
+        // Create input allocation for YUV data
         if (in == null) {
             in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
         }
+        // Create output allocation for RGBA data
         if (out == null) {
             out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
         }
 
+        // Convert YUV to RGBA using RenderScript intrinsic
         in.copyFrom(nv21);
-
         yuvToRgbIntrinsic.setInput(in);
         yuvToRgbIntrinsic.forEach(out);
         return out;

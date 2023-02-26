@@ -174,29 +174,14 @@ public class utils {
     }
 
 
-    public static ByteBuffer feedInputTensor(Tensor tensor,
-                                       int byte_per_channel,
-                                       Bitmap bitmapRaw,
-                                       float mean,
-                                       float std) throws Exception {
-        int[] shape = tensor.shape();
-        int inputSize = shape[1];
-        utils.getScreenshotBmp(bitmapRaw, "antes");
-        TensorImage tensorImage = new TensorImage(DataType.FLOAT32);
-        tensorImage.load(bitmapRaw);
-        ImageProcessor imageProcessor =
-                new ImageProcessor.Builder()
-                        // Center crop the image to the largest square possible
-                        .add(new ResizeWithCropOrPadOp(inputSize, inputSize))
-                        // Resize using Bilinear or Nearest neighbour
-                        .add(new ResizeOp(inputSize, inputSize, ResizeOp.ResizeMethod.BILINEAR))
-                        // Rotation counter-clockwise in 90 degree increments
-//                        .add(new Rot90Op(rotateDegrees / 90))
-//                                .add(new NormalizeOp(127.5, 127.5))
-//                                .add(new QuantizeOp(128.0, 1/128.0))
-                                .build();
-        utils.getScreenshotBmp(imageProcessor.process(tensorImage).getBitmap(), "despues");
-        return imageProcessor.process(tensorImage).getBuffer();
+    public static ByteBuffer feedInputTensor(
+                                            Bitmap bitmap,
+                                            float mean,
+                                            float std) throws Exception {
+        utils.getScreenshotBmp(bitmap, "antes");
+        TensorImage tensorImage = FeedInputTensorHelper.getBytebufferFromBitmap(bitmap);
+        utils.getScreenshotBmp(tensorImage.getBitmap(), "despues");
+        return tensorImage.getBuffer();
     }
     public static Bitmap feedInputToBitmap(Context context,
                                            List<byte[]> bytesList,
@@ -207,7 +192,7 @@ public class utils {
         int Yb = bytesList.get(0).length;
         int Ub = bytesList.get(1).length ;
         int Vb = bytesList.get(2).length ;
-        // Copy YUV data to input allocation
+        // Copy YUV data to plane byte
         byte[] data = new byte[Yb+Ub+Vb];
         System.arraycopy(bytesList.get(0), 0, data, 0, Yb);
         System.arraycopy(bytesList.get(2), 0, data, Yb, Ub);
@@ -219,58 +204,5 @@ public class utils {
         matrix.postRotate(rotation);
         bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);
         return bitmapRaw;
-    }
-    public static Bitmap convertYuvToBitmap(Context context, List<byte[]> bytesList, int imageWidth, int imageHeight, int rotation) {
-        try{
-            RenderScript rs = RenderScript.create(context);
-
-            // Create an Element for the YVU type
-            Element yvuType = Element.createPixel(rs, Element.DataType.UNSIGNED_8, Element.DataKind.PIXEL_YUV);
-            Type.Builder yvuTypeBuilder = new Type.Builder(rs, yvuType);
-            yvuTypeBuilder.setX(imageWidth).setY(imageHeight).setYuvFormat(ImageFormat.YV12);
-            Type yvuTypeYV12 = yvuTypeBuilder.create();
-
-            // Create input allocation for YVU data
-            int ySize = bytesList.get(0).length;
-            int vuSize = bytesList.get(1).length + bytesList.get(2).length;
-            int inputAllocationSize = ySize + vuSize;
-            Allocation inputAllocation = Allocation.createSized(rs, yvuTypeYV12.getElement(), inputAllocationSize);
-
-            // Copy YUV data to input allocation
-            byte[] data = new byte[bytesList.get(0).length + bytesList.get(1).length + bytesList.get(2).length];
-            System.arraycopy(bytesList.get(0), 0, data, 0, bytesList.get(0).length);
-            System.arraycopy(bytesList.get(1), 0, data, bytesList.get(0).length, bytesList.get(1).length);
-            System.arraycopy(bytesList.get(2), 0, data, bytesList.get(0).length + bytesList.get(1).length, bytesList.get(2).length);
-            inputAllocation.copyFrom(data);
-
-            // Create output allocation for RGBA data
-            Type.Builder rgbaTypeBuilder = new Type.Builder(rs, Element.RGBA_8888(rs));
-            rgbaTypeBuilder.setX(imageWidth).setY(imageHeight);
-            Allocation outputAllocation = Allocation.createTyped(rs, rgbaTypeBuilder.create(), Allocation.USAGE_SCRIPT);
-
-            // Convert YUV to RGBA using RenderScript intrinsic
-            ScriptIntrinsicYuvToRGB yuvToRgb = ScriptIntrinsicYuvToRGB.create(rs, Element.U8_4(rs));
-            yuvToRgb.setInput(inputAllocation);
-            yuvToRgb.forEach(outputAllocation);
-
-            // Copy RGBA data to Bitmap
-            Bitmap bitmap = Bitmap.createBitmap(imageWidth, imageHeight, Bitmap.Config.ARGB_8888);
-            outputAllocation.copyTo(bitmap);
-
-            // Rotate the Bitmap if necessary
-            Matrix matrix = new Matrix();
-            matrix.postRotate(rotation);
-            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-
-            // Release resources
-            inputAllocation.destroy();
-            outputAllocation.destroy();
-            yuvToRgb.destroy();
-            rs.destroy();
-            utils.getScreenshotBmp(bitmap, "NV21");
-            return bitmap;
-        }catch (Exception e){
-            throw e;
-        }
     }
 }

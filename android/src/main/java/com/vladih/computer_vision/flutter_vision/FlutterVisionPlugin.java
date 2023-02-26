@@ -114,7 +114,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
       List<Integer> class_is_text = (List<Integer>) args.get("class_is_text");
       Bitmap bitmap = utils.feedInputToBitmap(context.getApplicationContext(),image,image_height, image_width, 90);
-      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolo.getInputTensor(),4,bitmap,0,255);
+      ByteBuffer byteBuffer = utils.feedInputTensor(bitmap,0,255);
       List<Map<String, Object>> yolo_results =  yolo.detectOnFrame(byteBuffer, image_height, image_width, iou_threshold, conf_threshold);
       for (Map<String, Object> yolo_result:yolo_results) {
         float [] box = (float[]) yolo_result.get("box");
@@ -176,7 +176,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
       //invert width with height, because android take a photo rotating 90 degrees
       bitmap = utils.feedInputToBitmap(context,image,image_height, image_width, 90);
-      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolo.getInputTensor(),4,bitmap,0,255);
+      ByteBuffer byteBuffer = utils.feedInputTensor(bitmap,0,255);
       result.success(yolo.detectOnFrame(byteBuffer, bitmap.getHeight(), bitmap.getWidth(), iou_threshold, conf_threshold));
     }catch (Exception e){
       result.error("100", "Detection Error", e);
@@ -196,7 +196,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float iou_threshold = (float)(double)( args.get("iou_threshold"));
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
       Bitmap bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
-      ByteBuffer byteBuffer = utils.feedInputTensor(this.yolo.getInputTensor(),4,bitmap,0,255);
+      ByteBuffer byteBuffer = utils.feedInputTensor(bitmap,0,255);
       result.success(yolo.detectOnImage(byteBuffer, image_height, image_width, iou_threshold, conf_threshold));
     }catch (Exception e){
       result.error("100", "Detection Error", e);
