@@ -41,30 +41,30 @@ public class Yolov8 extends Yolo{
                   int rotation) {
         super(context, model_path, is_assets, num_threads, use_gpu, label_path, rotation);
     }
-    @Override
-    public List<Map<String, Object>> detectOnFrame(ByteBuffer byteBuffer,
-                                                   int image_height,
-                                                   int image_width,
-                                                   float iou_threshold,
-                                                   float conf_threshold) throws Exception {
-        try{
-            int[] shape = this.interpreter.getInputTensor(0).shape();
-            int inputSize = shape[1];
-            this.interpreter.run(byteBuffer, this.output);
-            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,inputSize,inputSize);
-            boxes = restore_size(boxes, inputSize,image_width,image_height);
-            return out(boxes, this.labels);
-        }catch (Exception e){
-            throw e;
-        }finally {
-            byteBuffer.clear();
-        }
-    }
+//    @Override
+//    public List<Map<String, Object>> detectOnFrame(ByteBuffer byteBuffer,
+//                                                   int image_height,
+//                                                   int image_width,
+//                                                   float iou_threshold,
+//                                                   float conf_threshold) throws Exception {
+//        try{
+//            int[] shape = this.interpreter.getInputTensor(0).shape();
+//            this.interpreter.run(byteBuffer, this.output);
+//            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,shape[1],shape[2]);
+//            boxes = restore_size(boxes, shape[1],shape[2],image_width,image_height);
+//            return out(boxes, this.labels);
+//        }catch (Exception e){
+//            throw e;
+//        }finally {
+//            byteBuffer.clear();
+//        }
+//    }
 
     @Override
     protected List<float[]>filter_box(float [][][] model_outputs, float iou_threshold,
-                                      float conf_threshold, float modelx_size, float modely_size){
+                                      float conf_threshold, float input_width, float input_height){
         try {
+            //reshape [1,box+class,detected_box] to reshape [1,detected_box,box+class]
             model_outputs = reshape(model_outputs);
             List<float[]> pre_box = new ArrayList<>();
             int class_index = 4;
@@ -73,14 +73,25 @@ public class Yolov8 extends Yolo{
             float[] tmp = new float[6];
             float x1,y1,x2,y2;
             for(int i=0; i<rows;i++){
-                //if (model_outputs[0][i][class_index]<=conf_threshold) continue;
                 //convert xywh to xyxy
-                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f)*modelx_size;
-                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*modely_size;
-                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*modelx_size;
-                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*modely_size;
+                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f)*input_width;
+                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*input_height;
+                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*input_width;
+                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*input_height;
                 for(int j=class_index;j<dimension;j++){
                     if (model_outputs[0][i][j]<conf_threshold) continue;
+                    System.out.println("**********************");
+                    System.out.println(model_outputs[0][i][0]);
+                    System.out.println(model_outputs[0][i][1]);
+                    System.out.println(model_outputs[0][i][2]);
+                    System.out.println(model_outputs[0][i][3]);
+                    System.out.println(model_outputs[0][i][j]);
+                    System.out.println(x1);
+                    System.out.println(y1);
+                    System.out.println(x2);
+                    System.out.println(y2);
+                    System.out.println((j-class_index)*1f);
+                    System.out.println("**********************");
                     tmp[0]=x1;
                     tmp[1]=y1;
                     tmp[2]=x2;
@@ -97,7 +108,6 @@ public class Yolov8 extends Yolo{
             Collections.sort(pre_box,compareValues);
             return nms(pre_box, iou_threshold);
         }catch (Exception e){
-            Log.e("filter_box", e.getMessage());
             throw  e;
         }
     }

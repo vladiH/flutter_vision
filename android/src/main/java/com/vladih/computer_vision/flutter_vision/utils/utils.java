@@ -176,12 +176,18 @@ public class utils {
 
     public static ByteBuffer feedInputTensor(
                                             Bitmap bitmap,
+                                            int input_width,
+                                            int input_height,
                                             float mean,
                                             float std) throws Exception {
-        utils.getScreenshotBmp(bitmap, "antes");
-        TensorImage tensorImage = FeedInputTensorHelper.getBytebufferFromBitmap(bitmap);
-        utils.getScreenshotBmp(tensorImage.getBitmap(), "despues");
-        return tensorImage.getBuffer();
+        try {
+            //        utils.getScreenshotBmp(bitmap, "antes");
+            TensorImage tensorImage = FeedInputTensorHelper.getBytebufferFromBitmap(bitmap, input_width, input_height, mean, std);
+            //        utils.getScreenshotBmp(tensorImage.getBitmap(), "despues");
+            return tensorImage.getBuffer();
+        }catch (Exception e){
+            throw e;
+        }
     }
     public static Bitmap feedInputToBitmap(Context context,
                                            List<byte[]> bytesList,
@@ -199,7 +205,7 @@ public class utils {
         System.arraycopy(bytesList.get(1), 0, data, Yb+Ub, Vb);
 
         Bitmap bitmapRaw = RenderScriptHelper.getBitmapFromNV21(context,data, imageWidth, imageHeight);
-        utils.getScreenshotBmp(bitmapRaw, "NV21");
+//        utils.getScreenshotBmp(bitmapRaw, "NV21");
         Matrix matrix = new Matrix();
         matrix.postRotate(rotation);
         bitmapRaw = Bitmap.createBitmap(bitmapRaw, 0, 0, bitmapRaw.getWidth(), bitmapRaw.getHeight(), matrix, true);

@@ -56,6 +56,7 @@ public class RenderScriptHelper {
 
     public static Bitmap getBitmapFromNV21(Context context, byte[] nv21, int width, int height) {
         RenderScriptHelper rsHelper = getInstance(context);
+        //https://blog.minhazav.dev/how-to-convert-yuv-420-sp-android.media.Image-to-Bitmap-or-jpeg/
         Allocation allocation = rsHelper.renderScriptNV21ToRGBA888(width, height, nv21);
 
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);

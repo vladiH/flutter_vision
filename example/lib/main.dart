@@ -188,7 +188,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
         labels: 'assets/labelss.txt',
-        modelPath: 'assets/yolov8n.tflite',
+        modelPath: 'assets/yolov5s.tflite',
         numThreads: 1,
         useGpu: false);
     setState(() {
@@ -240,7 +240,7 @@ class _MyAppState extends State<MyApp> {
         imageWidth: cameraImage.width,
         classIsText: [0],
         iouThreshold: 0.6,
-        confThreshold: 0.6);
+        confThreshold: 0.8);
     setState(() {
       yoloResults = result;
     });
@@ -255,7 +255,7 @@ class _MyAppState extends State<MyApp> {
         imageHeight: cameraImage.height,
         imageWidth: cameraImage.width,
         iouThreshold: 0.6,
-        confThreshold: 0.6);
+        confThreshold: 0.8);
     if (result.isNotEmpty) {
       setState(() {
         yoloResults = result;
@@ -266,8 +266,8 @@ class _MyAppState extends State<MyApp> {
   List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
     if (yoloResults.isEmpty) return [];
 
-    double factorX = screen.width / (cameraImage?.width ?? 1);
-    double factorY = screen.height / (cameraImage?.height ?? 1);
+    double factorX = screen.width / (cameraImage?.height ?? 1);
+    double factorY = screen.height / (cameraImage?.width ?? 1);
 
     Color colorPick = Color.fromARGB(255, 50, 233, 30);
 

@@ -99,6 +99,7 @@ public class Yolo {
                                 new GpuDelegate(gpuOptions.setQuantizedModelsAllowed(true)));
                     }
                 }
+                //batch, width, height, channels
                 this.interpreter = new Interpreter(buffer,interpreterOptions);
                 this.interpreter.allocateTensors();
                 this.labels = load_labels(asset_manager, label_path);
@@ -143,16 +144,15 @@ public class Yolo {
     }
 
     public List<Map<String, Object>> detectOnFrame(ByteBuffer byteBuffer,
-                                                   int image_height,
-                                                   int image_width,
+                                                   int source_height,
+                                                   int source_width,
                                                    float iou_threshold,
                                                    float conf_threshold) throws Exception {
         try{
             int[] shape = this.interpreter.getInputTensor(0).shape();
-            int inputSize = shape[1];
             this.interpreter.run(byteBuffer, this.output);
-            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,inputSize,inputSize);
-            boxes = restore_size(boxes, inputSize,image_width,image_height);
+            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,shape[1],shape[2]);
+            boxes = restore_size(boxes, shape[1],shape[2], source_width,source_height);
             return out(boxes, this.labels);
         }catch (Exception e){
             throw e;
@@ -167,11 +167,10 @@ public class Yolo {
                                                    float iou_threshold,
                                                    float conf_threshold)  throws  Exception{
         try{
-            int[] inputShape = this.interpreter.getInputTensor(0).shape();
-            int inputSize = inputShape[1];
+            int[] shape = this.interpreter.getInputTensor(0).shape();
             interpreter.run(byteBuffer, this.output);
-            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,inputSize,inputSize);
-            boxes = restore_size(boxes, inputSize,image_width,image_height);
+            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,shape[1],shape[2]);
+            boxes = restore_size(boxes, shape[1],shape[2],image_width,image_height);
             return out(boxes, this.labels);
 
         }catch (Exception e){
@@ -184,7 +183,7 @@ public class Yolo {
     }
 
     protected List<float[]>filter_box(float [][][] model_outputs, float iou_threshold,
-                                           float conf_threshold, float modelx_size, float modely_size){
+                                           float conf_threshold, float input_width, float input_height){
         try {
             List<float[]> pre_box = new ArrayList<>();
             int conf_index = 4;
@@ -194,12 +193,11 @@ public class Yolo {
             float[] tmp = new float[7];
             float x1,y1,x2,y2,conf;
             for(int i=0; i<rows;i++){
-                //if (model_outputs[0][i][class_index]<=conf_threshold) continue;
                 //convert xywh to xyxy
-                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f)*modelx_size;
-                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*modely_size;
-                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*modelx_size;
-                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*modely_size;
+                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f)*input_width;
+                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*input_height;
+                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*input_width;
+                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*input_height;
                 conf = model_outputs[0][i][conf_index];
                 final float score = model_outputs[0][i][conf_index];
                 for(int j=class_index;j<dimension;j++){
@@ -223,7 +221,6 @@ public class Yolo {
             Collections.sort(pre_box,compareValues);
             return nms(pre_box, iou_threshold);
         }catch (Exception e){
-            Log.e("filter_box", e.getMessage());
             throw  e;
         }
     }
@@ -259,30 +256,34 @@ public class Yolo {
     }
 
     protected List<float[]>  restore_size(List<float[]> nms,
-                                        int model_size,
-                                        int src_image_width,
-                                        int src_image_height){
+                                        int input_width,
+                                        int input_height,
+                                        int src_width,
+                                        int src_height){
         try{
-            float gain = min(model_size/(float) src_image_width,model_size/(float) src_image_height);
+            //TODO: support only for cropCenterORPadding resize
+            float gainx = input_width/(float) src_width;
+            float gainy = input_height/(float) src_height;
 
-            float padx = (model_size-src_image_width*gain)/2f;
-            float pady = (model_size-src_image_height*gain)/2f;
+            float padx = (src_width-input_width)/2f;
+            float pady = (src_height-input_height)/2f;
             for(int i=0;i<nms.size();i++){
-                System.out.println("**********************");
-                System.out.println(gain);
-                System.out.println(padx);
-                System.out.println(pady);
-                System.out.println(nms.get(i)[0]);
-                System.out.println(nms.get(i)[1]);
-                System.out.println(nms.get(i)[2]);
-                System.out.println(nms.get(i)[3]);
-                System.out.println(nms.get(i)[4]);
-                System.out.println(nms.get(i)[5]);
-                System.out.println("**********************");
-                nms.get(i)[0]= min(src_image_width, Math.max((nms.get(i)[0]-padx)/gain,0));
-                nms.get(i)[1]= min(src_image_height, Math.max((nms.get(i)[1]-pady)/gain,0));
-                nms.get(i)[2]= min(src_image_width, Math.max((nms.get(i)[2]-padx)/gain,0));
-                nms.get(i)[3]= min(src_image_height, Math.max((nms.get(i)[3]-pady)/gain,0));
+//                System.out.println("**********************");
+//                System.out.println(gainx);
+//                System.out.println(gainy);
+//                System.out.println(padx);
+//                System.out.println(pady);
+//                System.out.println(nms.get(i)[0]);
+//                System.out.println(nms.get(i)[1]);
+//                System.out.println(nms.get(i)[2]);
+//                System.out.println(nms.get(i)[3]);
+//                System.out.println(nms.get(i)[4]);
+//                System.out.println(nms.get(i)[5]);
+//                System.out.println("**********************");
+                nms.get(i)[0]= min(src_width, Math.max(nms.get(i)[0]+padx,0));
+                nms.get(i)[1]= min(src_height, Math.max(nms.get(i)[1]+pady,0));
+                nms.get(i)[2]= min(src_width, Math.max(nms.get(i)[2]+padx,0));
+                nms.get(i)[3]= min(src_height, Math.max(nms.get(i)[3]+ pady,0));
             }
             return  nms;
         }catch (Exception e){
