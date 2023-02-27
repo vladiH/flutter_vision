@@ -87,6 +87,7 @@ abstract class BaseFlutterVision {
     required int imageWidth,
     double? iouThreshold,
     double? confThreshold,
+    double? classThreshold,
   });
 
   Future<void> closeYoloModel() async {
