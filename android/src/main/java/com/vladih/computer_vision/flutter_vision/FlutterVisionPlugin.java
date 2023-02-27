@@ -112,11 +112,12 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       int image_width = (int) args.get("image_width");
       float iou_threshold = (float)(double)( args.get("iou_threshold"));
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
+      float class_threshold = (float)(double)( args.get("class_threshold"));
       List<Integer> class_is_text = (List<Integer>) args.get("class_is_text");
       Bitmap bitmap = utils.feedInputToBitmap(context.getApplicationContext(),image,image_height, image_width, 90);
       int [] shape = yolo.getInputTensor().shape();
       ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2],0,255);
-      List<Map<String, Object>> yolo_results =  yolo.detectOnFrame(byteBuffer, image_height, image_width, iou_threshold, conf_threshold);
+      List<Map<String, Object>> yolo_results =  yolo.detectOnFrame(byteBuffer, image_height, image_width, iou_threshold, conf_threshold, class_threshold);
       for (Map<String, Object> yolo_result:yolo_results) {
         float [] box = (float[]) yolo_result.get("box");
         if(class_is_text.contains((int)box[5])){
@@ -195,11 +196,12 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       int image_width = (int) args.get("image_width");
       float iou_threshold = (float)(double)( args.get("iou_threshold"));
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
+      float class_threshold = (float)(double)( args.get("class_threshold"));
       //invert width with height, because android take a photo rotating 90 degrees
       bitmap = utils.feedInputToBitmap(context,image,image_height, image_width, 90);
       int [] shape = yolo.getInputTensor().shape();
       ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2],0,255);
-      result.success(yolo.detectOnFrame(byteBuffer, bitmap.getHeight(), bitmap.getWidth(), iou_threshold, conf_threshold));
+      result.success(yolo.detectOnFrame(byteBuffer, bitmap.getHeight(), bitmap.getWidth(), iou_threshold, conf_threshold, class_threshold));
     }catch (Exception e){
       result.error("100", "Detection Error", e);
     }finally {
@@ -217,10 +219,11 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       int image_width = (int) args.get("image_width");
       float iou_threshold = (float)(double)( args.get("iou_threshold"));
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
+      float class_threshold = (float)(double)( args.get("class_threshold"));
       Bitmap bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
       int [] shape = yolo.getInputTensor().shape();
       ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2],0,255);
-      result.success(yolo.detectOnImage(byteBuffer, image_height, image_width, iou_threshold, conf_threshold));
+      result.success(yolo.detectOnImage(byteBuffer, image_height, image_width, iou_threshold, conf_threshold, class_threshold));
     }catch (Exception e){
       result.error("100", "Detection Error", e);
     }

@@ -103,20 +103,22 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> yoloOnFrame(
-      {required List<Uint8List> bytesList,
-      required int imageHeight,
-      required int imageWidth,
-      double? iouThreshold,
-      double? confThreshold}) async {
+  Future<List<Map<String, dynamic>>> yoloOnFrame({
+    required List<Uint8List> bytesList,
+    required int imageHeight,
+    required int imageWidth,
+    double? iouThreshold,
+    double? confThreshold,
+    double? classThreshold,
+  }) async {
     try {
       return (await _yoloOnFrame(
-        bytesList: bytesList,
-        imageHeight: imageHeight,
-        imageWidth: imageWidth,
-        iouThreshold: iouThreshold ?? 0.4,
-        confThreshold: confThreshold ?? 0.5,
-      ));
+          bytesList: bytesList,
+          imageHeight: imageHeight,
+          imageWidth: imageWidth,
+          iouThreshold: iouThreshold ?? 0.4,
+          confThreshold: confThreshold ?? 0.5,
+          classThreshold: classThreshold ?? 0.5));
     } catch (e) {
       rethrow;
     }
@@ -128,6 +130,7 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
     required int imageWidth,
     required double iouThreshold,
     required double confThreshold,
+    required double classThreshold,
   }) async {
     try {
       final x = await channel.invokeMethod<List<dynamic>>(
@@ -138,6 +141,7 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
           "image_width": imageWidth,
           "iou_threshold": iouThreshold,
           "conf_threshold": confThreshold,
+          "class_threshold": classThreshold
         },
       );
       return x?.isNotEmpty ?? false

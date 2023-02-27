@@ -147,11 +147,11 @@ public class Yolo {
                                                    int source_height,
                                                    int source_width,
                                                    float iou_threshold,
-                                                   float conf_threshold) throws Exception {
+                                                   float conf_threshold, float class_threshold) throws Exception {
         try{
             int[] shape = this.interpreter.getInputTensor(0).shape();
             this.interpreter.run(byteBuffer, this.output);
-            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,shape[1],shape[2]);
+            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold, class_threshold,shape[1],shape[2]);
             boxes = restore_size(boxes, shape[1],shape[2], source_width,source_height);
             return out(boxes, this.labels);
         }catch (Exception e){
@@ -165,11 +165,11 @@ public class Yolo {
                                                    int image_height,
                                                    int image_width,
                                                    float iou_threshold,
-                                                   float conf_threshold)  throws  Exception{
+                                                   float conf_threshold, float class_threshold)  throws  Exception{
         try{
             int[] shape = this.interpreter.getInputTensor(0).shape();
             interpreter.run(byteBuffer, this.output);
-            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold,shape[1],shape[2]);
+            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold, class_threshold, shape[1],shape[2]);
             boxes = restore_size(boxes, shape[1],shape[2],image_width,image_height);
             return out(boxes, this.labels);
 
@@ -183,7 +183,7 @@ public class Yolo {
     }
 
     protected List<float[]>filter_box(float [][][] model_outputs, float iou_threshold,
-                                           float conf_threshold, float input_width, float input_height){
+                                           float conf_threshold, float class_threshold, float input_width, float input_height){
         try {
             List<float[]> pre_box = new ArrayList<>();
             int conf_index = 4;
@@ -203,7 +203,7 @@ public class Yolo {
                 for(int j=class_index;j<dimension;j++){
                     //change if result is poor
                     if(score<=conf_threshold) continue;
-                    if (model_outputs[0][i][j]<conf_threshold) continue;
+                    if (model_outputs[0][i][j]<class_threshold) continue;
                     tmp[0]=x1;
                     tmp[1]=y1;
                     tmp[2]=x2;

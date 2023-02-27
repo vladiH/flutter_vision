@@ -95,36 +95,28 @@ abstract class FlutterVision {
       bool? useGpu});
 
   ///yoloOnFrame accept a byte List as input and
-  ///return a ResponseHandler object.
+  ///return a List<Map<String, dynamic>>.
   ///
-  ///if yoloOnFrame run without error, it returns a ResponseHandler as a success object,
-  ///otherwise it returns a ResponseHandler as an error object.
-  ///
-  ///```json:{
-  ///  "type": 'success',
-  ///  "message": "ok",
-  ///  "data": List<Map<String, dynamic>>
-  /// }```
-  ///where map is mapped as follows:
+  ///where map is mapped as follow:
   ///
   ///```Map<String, dynamic>:{
-  ///    "confidence": double,
-  ///    "box": {x1:double, y1:double, x2:double, y2:double},
-  ///    "image": Uint8List,
-  ///    "tag": String
+  ///    "box": [x1:top, y1:left, x2:bottom, y2:right, class_confidence]
+  ///    "tag": String:detected class
   /// }```
   ///
   ///args: [bytesList] - image as byte list
   ///, [imageHeight] - image height
   ///, [imageWidth] - image width
-  ///, [iouThreshold] - intersection over union threshold
-  ///, [confThreshold] - confidence threshold
+  ///, [iouThreshold] - intersection over union threshold, default 0.4
+  ///, [confThreshold] - model confidence threshold, default 0.5, only for [yolov5]
+  ///, [classThreshold] - class confidence threshold, default 0.5
   Future<List<Map<String, dynamic>>> yoloOnFrame({
     required List<Uint8List> bytesList,
     required int imageHeight,
     required int imageWidth,
     double? iouThreshold,
     double? confThreshold,
+    double? classThreshold,
   });
 
   ///yoloOnFrame accept a Uint8List as input and

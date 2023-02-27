@@ -222,7 +222,8 @@ class _MyAppState extends State<MyApp> {
         imageHeight: cameraImage.height,
         imageWidth: cameraImage.width,
         iouThreshold: 0.6,
-        confThreshold: 0.8);
+        confThreshold: 0.8,
+        classThreshold: 0.8);
     if (result.isNotEmpty) {
       setState(() {
         yoloResults = result;

@@ -78,6 +78,7 @@ abstract class BaseFlutterVision {
     required int imageWidth,
     double? iouThreshold,
     double? confThreshold,
+    double? classThreshold,
   });
 
   Future<List<Map<String, dynamic>>> yoloOnImage({
