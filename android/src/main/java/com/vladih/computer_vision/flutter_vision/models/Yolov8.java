@@ -52,7 +52,6 @@ public class Yolov8 extends Yolo{
             int class_index = 4;
             int dimension = model_outputs[0][0].length;
             int rows = model_outputs[0].length;
-            float[] tmp = new float[6];
             float x1,y1,x2,y2;
             for(int i=0; i<rows;i++){
                 //convert xywh to xyxy
@@ -60,20 +59,29 @@ public class Yolov8 extends Yolo{
                 y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*input_height;
                 x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*input_width;
                 y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*input_height;
+                float max = 0;
+                int y = 0;
                 for(int j=class_index;j<dimension;j++){
-                    if (model_outputs[0][i][j]<conf_threshold) continue;
+                    if (model_outputs[0][i][j]<class_threshold) continue;
+                    if (max<model_outputs[0][i][j]){
+                        max = model_outputs[0][i][j];
+                        y = j;
+                    }
+                }
+                if (max>0){
+                    float[] tmp = new float[6];
                     tmp[0]=x1;
                     tmp[1]=y1;
                     tmp[2]=x2;
                     tmp[3]=y2;
-                    tmp[4]=model_outputs[0][i][j];
-                    tmp[5]=(j-class_index)*1f;
+                    tmp[4]=model_outputs[0][i][y];
+                    tmp[5]=(y-class_index)*1f;
                     pre_box.add(tmp);
                 }
             }
             if (pre_box.isEmpty()) return new ArrayList<>();
             //for reverse orden, insteand of using .reversed method
-            Comparator<float []> compareValues = (v1, v2)->Float.compare(v2[4],v1[4]);
+            Comparator<float []> compareValues = (v1, v2)->Float.compare(v1[1],v2[1]);
             //Collections.sort(pre_box,compareValues.reversed());
             Collections.sort(pre_box,compareValues);
             return nms(pre_box, iou_threshold);

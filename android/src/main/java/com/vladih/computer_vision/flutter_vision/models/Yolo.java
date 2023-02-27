@@ -7,6 +7,8 @@ import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.util.Log;
 
+import com.vladih.computer_vision.flutter_vision.utils.FeedInputTensorHelper;
+
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.tensorflow.lite.Interpreter;
@@ -190,7 +192,6 @@ public class Yolo {
             int class_index = 5;
             int dimension = model_outputs[0][0].length;
             int rows = model_outputs[0].length;
-            float[] tmp = new float[7];
             float x1,y1,x2,y2,conf;
             for(int i=0; i<rows;i++){
                 //convert xywh to xyxy
@@ -199,24 +200,30 @@ public class Yolo {
                 x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*input_width;
                 y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*input_height;
                 conf = model_outputs[0][i][conf_index];
-                final float score = model_outputs[0][i][conf_index];
+                if(conf<conf_threshold) continue;
+                float max = 0;
+                int y = 0;
                 for(int j=class_index;j<dimension;j++){
-                    //change if result is poor
-                    if(score<=conf_threshold) continue;
                     if (model_outputs[0][i][j]<class_threshold) continue;
+                    if (max<model_outputs[0][i][j]){
+                        max = model_outputs[0][i][j];
+                        y = j;
+                    }
+                }
+                if (max>0){
+                    float[] tmp = new float[6];
                     tmp[0]=x1;
                     tmp[1]=y1;
                     tmp[2]=x2;
                     tmp[3]=y2;
-                    tmp[4]=conf;
-                    tmp[5]=(j-class_index)*1f;
-                    tmp[6]=score;
+                    tmp[4]=model_outputs[0][i][y];
+                    tmp[5]=(y-class_index)*1f;
                     pre_box.add(tmp);
                 }
             }
             if (pre_box.isEmpty()) return new ArrayList<>();
             //for reverse orden, insteand of using .reversed method
-            Comparator<float []> compareValues = (v1, v2)->Float.compare(v2[6],v1[6]);
+            Comparator<float []> compareValues = (v1, v2)->Float.compare(v1[1],v2[1]);
             //Collections.sort(pre_box,compareValues.reversed());
             Collections.sort(pre_box,compareValues);
             return nms(pre_box, iou_threshold);
@@ -228,18 +235,19 @@ public class Yolo {
     protected static List<float[]>nms(List<float[]> boxes, float iou_threshold){
         try {
             for(int i =0; i<boxes.size();i++){
-                final float [] box = boxes.get(i);
+                float [] box = boxes.get(i);
                 for(int j =i+1; j<boxes.size();j++){
-                    final float [] next_box = boxes.get(j);
+                    float [] next_box = boxes.get(j);
                     float x1 = Math.max(next_box[0],box[0]);
                     float y1 = Math.max(next_box[1],box[1]);
                     float x2 = Math.min(next_box[2],box[2]);
                     float y2 = Math.min(next_box[3],box[3]);
 
-                    final float width = Math.max(0,x2-x1);
-                    final float height = Math.max(0,y2-y1);
-                    final float intersection = width*height;
-                    final float union = (next_box[2]-next_box[0])*(next_box[3]-next_box[1])
+                    float width = Math.max(0,x2-x1);
+                    float height = Math.max(0,y2-y1);
+
+                    float intersection = width*height;
+                    float union = (next_box[2]-next_box[0])*(next_box[3]-next_box[1])
                             + (box[2]-box[0])*(box[3]-box[1])-intersection;
                     float iou = intersection/union;
                     if (iou>iou_threshold){
@@ -261,29 +269,26 @@ public class Yolo {
                                         int src_width,
                                         int src_height){
         try{
-            //TODO: support only for cropCenterORPadding resize
-            float gainx = input_width/(float) src_width;
-            float gainy = input_height/(float) src_height;
-
-            float padx = (src_width-input_width)/2f;
-            float pady = (src_height-input_height)/2f;
-            for(int i=0;i<nms.size();i++){
-//                System.out.println("**********************");
-//                System.out.println(gainx);
-//                System.out.println(gainy);
-//                System.out.println(padx);
-//                System.out.println(pady);
-//                System.out.println(nms.get(i)[0]);
-//                System.out.println(nms.get(i)[1]);
-//                System.out.println(nms.get(i)[2]);
-//                System.out.println(nms.get(i)[3]);
-//                System.out.println(nms.get(i)[4]);
-//                System.out.println(nms.get(i)[5]);
-//                System.out.println("**********************");
-                nms.get(i)[0]= min(src_width, Math.max(nms.get(i)[0]+padx,0));
-                nms.get(i)[1]= min(src_height, Math.max(nms.get(i)[1]+pady,0));
-                nms.get(i)[2]= min(src_width, Math.max(nms.get(i)[2]+padx,0));
-                nms.get(i)[3]= min(src_height, Math.max(nms.get(i)[3]+ pady,0));
+            //restore size after scaling, larger images
+            if (src_width > input_width || src_height > input_height) {
+                float gainx = input_width/(float) src_width;
+                float gainy = input_height/(float) src_height;
+                for(int i=0;i<nms.size();i++){
+                    nms.get(i)[0]= min(src_width, Math.max(nms.get(i)[0]*gainx,0));
+                    nms.get(i)[1]= min(src_height, Math.max(nms.get(i)[1]*gainy,0));
+                    nms.get(i)[2]= min(src_width, Math.max(nms.get(i)[2]*gainx,0));
+                    nms.get(i)[3]= min(src_height, Math.max(nms.get(i)[3]*gainy,0));
+                }
+                //restore size after padding, smaller images
+            }else{
+                float padx = (src_width-input_width)/2f;
+                float pady = (src_height-input_height)/2f;
+                for(int i=0;i<nms.size();i++){
+                    nms.get(i)[0]= min(src_width, Math.max(nms.get(i)[0]+padx,0));
+                    nms.get(i)[1]= min(src_height, Math.max(nms.get(i)[1]+pady,0));
+                    nms.get(i)[2]= min(src_width, Math.max(nms.get(i)[2]+padx,0));
+                    nms.get(i)[3]= min(src_height, Math.max(nms.get(i)[3]+ pady,0));
+                }
             }
             return  nms;
         }catch (Exception e){

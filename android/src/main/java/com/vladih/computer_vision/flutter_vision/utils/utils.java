@@ -178,12 +178,19 @@ public class utils {
                                             Bitmap bitmap,
                                             int input_width,
                                             int input_height,
+                                            int src_width,
+                                            int src_height,
                                             float mean,
                                             float std) throws Exception {
         try {
-            //        utils.getScreenshotBmp(bitmap, "antes");
-            TensorImage tensorImage = FeedInputTensorHelper.getBytebufferFromBitmap(bitmap, input_width, input_height, mean, std);
-            //        utils.getScreenshotBmp(tensorImage.getBitmap(), "despues");
+            //utils.getScreenshotBmp(bitmap, "antes");
+            TensorImage tensorImage;
+            if (src_width > input_width || src_height > input_height) {
+                tensorImage= FeedInputTensorHelper.getBytebufferFromBitmap(bitmap, input_width, input_height, mean, std, "downsize");
+            }else{
+                tensorImage= FeedInputTensorHelper.getBytebufferFromBitmap(bitmap, input_width, input_height, mean, std, "upsize");
+            }
+//            utils.getScreenshotBmp(tensorImage.getBitmap(), "despues");
             return tensorImage.getBuffer();
         }catch (Exception e){
             throw e;

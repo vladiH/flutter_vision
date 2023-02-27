@@ -1,11 +1,14 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_vision/flutter_vision.dart';
+import 'package:image_picker/image_picker.dart';
 
-enum Models { yolov5, ocr }
+enum Models { yolo, ocr }
 
 late List<CameraDescription> cameras;
 main() async {
@@ -14,7 +17,7 @@ main() async {
   cameras = await availableCameras();
   runApp(
     const MaterialApp(
-      home: MyApp(model: Models.yolov5),
+      home: MyApp(model: Models.yolo),
     ),
   );
 }
@@ -32,40 +35,40 @@ class _MyAppState extends State<MyApp> {
   late FlutterVision vision;
   late List<Map<String, dynamic>> yoloResults;
   CameraImage? cameraImage;
+  File? imageFile;
   bool isLoaded = false;
   bool isDetecting = false;
+
   @override
   void initState() {
     super.initState();
-    controller = CameraController(cameras[0], ResolutionPreset.low);
-    controller.initialize().then((_) {
-      if (!mounted) {
-        return;
-      }
-      vision = FlutterVision();
-      switch (widget.model) {
-        case Models.ocr:
-          loadOcrModel().then((value) {
-            setState(() {
-              isLoaded = true;
-              isDetecting = false;
-              yoloResults = [];
-            });
+    vision = FlutterVision();
+    switch (widget.model) {
+      case Models.ocr:
+        // controller = CameraController(cameras[0], ResolutionPreset.low);
+        // controller.initialize();
+        loadOcrModel().then((value) {
+          setState(() {
+            isLoaded = true;
+            isDetecting = false;
+            yoloResults = [];
           });
-          break;
-        case Models.yolov5:
-          loadYoloModel().then((value) {
-            setState(() {
-              isLoaded = true;
-              isDetecting = false;
-              yoloResults = [];
-            });
+        });
+        break;
+      case Models.yolo:
+        // controller = CameraController(cameras[0], ResolutionPreset.low);
+        // controller.initialize();
+        loadYoloModel().then((value) {
+          setState(() {
+            isLoaded = true;
+            isDetecting = false;
+            yoloResults = [];
           });
-          break;
-        default:
-          break;
-      }
-    });
+        });
+        break;
+      default:
+        break;
+    }
   }
 
   @override
@@ -90,12 +93,16 @@ class _MyAppState extends State<MyApp> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          AspectRatio(
-            aspectRatio: controller.value.aspectRatio,
-            child: CameraPreview(
-              controller,
-            ),
-          ),
+          imageFile != null
+              ? Image.file(imageFile!)
+              : TextButton(
+                  onPressed: pickImage, child: const Text("Pick image")),
+          // AspectRatio(
+          //   aspectRatio: controller.value.aspectRatio,
+          //   child: CameraPreview(
+          //     controller,
+          //   ),
+          // ),
           ...displayBoxesAroundRecognizedObjects(size),
           Positioned(
             bottom: 75,
@@ -135,9 +142,9 @@ class _MyAppState extends State<MyApp> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await stopDetection();
+          await yoloOnImage();
         },
-        child: const Icon(Icons.restart_alt_rounded),
+        child: const Icon(Icons.photo),
       ),
     );
   }
@@ -162,7 +169,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
         labels: 'assets/labelss.txt',
-        modelPath: 'assets/yolov8n.tflite',
+        modelPath: 'assets/yolov5s.tflite',
         modelVersion: "yolov5",
         numThreads: 1,
         useGpu: false);
@@ -187,7 +194,7 @@ class _MyAppState extends State<MyApp> {
         case Models.ocr:
           ocrOnFrame(image);
           break;
-        case Models.yolov5:
+        case Models.yolo:
           yoloOnFrame(image);
           break;
         default:
@@ -221,9 +228,37 @@ class _MyAppState extends State<MyApp> {
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,
         imageWidth: cameraImage.width,
-        iouThreshold: 0.6,
+        iouThreshold: 0.4,
         confThreshold: 0.8,
-        classThreshold: 0.8);
+        classThreshold: 0.5);
+    if (result.isNotEmpty) {
+      setState(() {
+        yoloResults = result;
+      });
+    }
+  }
+
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    // Capture a photo
+    final XFile? photo = await picker.pickImage(source: ImageSource.gallery);
+    if (photo != null) {
+      setState(() {
+        imageFile = File(photo.path);
+      });
+    }
+  }
+
+  yoloOnImage() async {
+    Uint8List byte = await imageFile!.readAsBytes();
+    final image = await decodeImageFromList(byte);
+    final result = await vision.yoloOnImage(
+        bytesList: byte,
+        imageHeight: image.height,
+        imageWidth: image.width,
+        iouThreshold: 0.8,
+        confThreshold: 0.8,
+        classThreshold: 0.7);
     if (result.isNotEmpty) {
       setState(() {
         yoloResults = result;
