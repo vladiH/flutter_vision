@@ -152,19 +152,39 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     final int num_threads = (int) args.get("num_threads");
     final boolean use_gpu = (boolean) args.get("use_gpu");
     final String label_path= this.assets.getAssetFilePathByName(args.get("label_path").toString());
-//      final float image_mean= (float)((double) args.get("image_mean"));
-//      final float image_std= (float)((double) args.get("image_std"));
     final int rotation= (int) args.get("rotation");
-    Yolo yolo = new Yolov5(
-            context,
-            model,
-            is_asset,
-            num_threads,
-            use_gpu,
-            label_path,
-            rotation);
-    yolo.initialize_model();
-    return yolo;
+    final String version = args.get("model_version").toString();
+    Yolo yolo = null;
+    switch (version){
+     case "yolov5":{
+       yolo = new Yolov5(
+               context,
+               model,
+               is_asset,
+               num_threads,
+               use_gpu,
+               label_path,
+               rotation);
+       yolo.initialize_model();
+       return yolo;
+     }
+      case "yolov8":{
+        yolo = new Yolov8(
+                context,
+                model,
+                is_asset,
+                num_threads,
+                use_gpu,
+                label_path,
+                rotation);
+        yolo.initialize_model();
+        return yolo;
+      }
+      default:{
+        throw new Exception("Model version must be yolov5 or yolov8");
+      }
+    }
+
   }
 
   private void yolo_on_frame(Map<String, Object> args, Result result){

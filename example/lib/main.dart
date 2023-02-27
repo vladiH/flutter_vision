@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:camera/camera.dart';
@@ -9,7 +8,7 @@ import 'package:flutter_vision/flutter_vision.dart';
 enum Models { yolov5, ocr }
 
 late List<CameraDescription> cameras;
-Future<void> main() async {
+main() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
   cameras = await availableCameras();
@@ -97,31 +96,6 @@ class _MyAppState extends State<MyApp> {
               controller,
             ),
           ),
-          ColorFiltered(
-            colorFilter: ColorFilter.mode(
-                Colors.black.withOpacity(0.7), BlendMode.srcOut),
-            child: Stack(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                      color: Colors.black,
-                      backgroundBlendMode: BlendMode.dstOut),
-                ),
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: Container(
-                    margin: EdgeInsets.only(top: size.height * 0.2),
-                    height: size.height * 0.30,
-                    width: size.width * 0.9,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
           ...displayBoxesAroundRecognizedObjects(size),
           Positioned(
             bottom: 75,
@@ -137,7 +111,7 @@ class _MyAppState extends State<MyApp> {
               child: isDetecting
                   ? IconButton(
                       onPressed: () async {
-                        stopImageStream();
+                        stopDetection();
                       },
                       icon: const Icon(
                         Icons.stop,
@@ -147,7 +121,7 @@ class _MyAppState extends State<MyApp> {
                     )
                   : IconButton(
                       onPressed: () async {
-                        await startImageStream();
+                        await startDetection();
                       },
                       icon: const Icon(
                         Icons.play_arrow,
@@ -161,7 +135,7 @@ class _MyAppState extends State<MyApp> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await stopImageStream();
+          await stopDetection();
         },
         child: const Icon(Icons.restart_alt_rounded),
       ),
@@ -188,7 +162,8 @@ class _MyAppState extends State<MyApp> {
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
         labels: 'assets/labelss.txt',
-        modelPath: 'assets/yolov5s.tflite',
+        modelPath: 'assets/yolov8n.tflite',
+        modelVersion: "yolov5",
         numThreads: 1,
         useGpu: false);
     setState(() {
@@ -196,7 +171,7 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Future<void> startImageStream() async {
+  Future<void> startDetection() async {
     if (!controller.value.isInitialized) {
       return;
     }
@@ -221,15 +196,10 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  Future<void> stopImageStream() async {
-    if (!controller.value.isInitialized) {
-      return;
-    }
-    if (controller.value.isStreamingImages) {
-      await controller.stopImageStream();
-    }
+  Future<void> stopDetection() async {
     setState(() {
       yoloResults.clear();
+      isDetecting = false;
     });
   }
 
@@ -247,9 +217,6 @@ class _MyAppState extends State<MyApp> {
   }
 
   yoloOnFrame(CameraImage cameraImage) async {
-    print("88888888888888888888");
-    print(cameraImage.height);
-    print(cameraImage.width);
     final result = await vision.yoloOnFrame(
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,
@@ -269,13 +236,9 @@ class _MyAppState extends State<MyApp> {
     double factorX = screen.width / (cameraImage?.height ?? 1);
     double factorY = screen.height / (cameraImage?.width ?? 1);
 
-    Color colorPick = Color.fromARGB(255, 50, 233, 30);
+    Color colorPick = const Color.fromARGB(255, 50, 233, 30);
 
     return yoloResults.map((result) {
-      print(result["box"][0] * factorX);
-      print(result["box"][1] * factorY);
-      print(result["box"][2] * factorX);
-      print(result["box"][3] * factorY);
       return Positioned(
         left: result["box"][0] * factorX,
         top: result["box"][1] * factorY,

@@ -84,6 +84,7 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
   Future<void> loadYoloModel(
       {required String modelPath,
       required String labels,
+      required String modelVersion,
       int? numThreads,
       bool? useGpu}) async {
     try {
@@ -93,9 +94,8 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
         'num_threads': numThreads ?? 1,
         'use_gpu': useGpu ?? false,
         'label_path': labels,
-        'image_mean': 0.0,
-        'image_std': 255.0,
         'rotation': 90,
+        'model_version': modelVersion
       });
     } catch (e) {
       rethrow;
@@ -140,7 +140,6 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
           "conf_threshold": confThreshold,
         },
       );
-      print(x);
       return x?.isNotEmpty ?? false
           ? x!.map((e) => Map<String, dynamic>.from(e)).toList()
           : [];

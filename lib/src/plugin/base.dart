@@ -67,6 +67,7 @@ abstract class BaseFlutterVision {
   Future<void> loadYoloModel({
     required String modelPath,
     required String labels,
+    required String modelVersion,
     int? numThreads,
     bool? useGpu,
   });

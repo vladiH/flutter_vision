@@ -21,7 +21,7 @@ public class FeedInputTensorHelper {
                         // Center crop the image to the largest square possible
                         .add(new ResizeWithCropOrPadOp(height, width))
                         // Resize using Bilinear or Nearest neighbour
-                        .add(new ResizeOp(height, width, ResizeOp.ResizeMethod.BILINEAR))
+//                        .add(new ResizeOp(height, width, ResizeOp.ResizeMethod.BILINEAR))
                         // Rotation counter-clockwise in 90 degree increments
 //                        .add(new Rot90Op(rotateDegrees / 90))
                                 .add(new NormalizeOp(mean, std))

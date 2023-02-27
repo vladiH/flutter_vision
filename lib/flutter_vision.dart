@@ -80,23 +80,17 @@ abstract class FlutterVision {
   /// dispose OCRModel, clean and save resources
   Future<void> closeOcrModel();
 
-  ///loadYoloModel: load YOLOv5 model from the assets folder and
-  ///return a ResponseHandler object.
-  ///
-  ///if the load is successful, it returns a ResponseHandler as a success object,
-  ///otherwise it returns a ResponseHandler as an error object
-  ///```json:{
-  /// "type": "success" or "error",
-  /// "message": "ok",
-  /// "data": {}```
+  ///loadYoloModel: load YOLOv5 model from the assets folder
   ///
   /// args: [modelPath] - path to the model file
   /// ,[labelsPath] - path to the labels file
+  /// ,[modelVersion] - yolov5, yolov8
   /// ,[numThreads] - number of threads to use for inference
   /// ,[useGPU] - use GPU for inference
   Future<void> loadYoloModel(
       {required String modelPath,
       required String labels,
+      required String modelVersion,
       int? numThreads,
       bool? useGpu});
 
