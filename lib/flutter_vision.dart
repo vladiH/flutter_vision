@@ -147,45 +147,19 @@ abstract class FlutterVision {
   /// dispose OCRModel, clean and save resources
   Future<void> closeYoloModel();
 
-  ///loadTesseractModel: load Tesseract5 model from the assets folder and
-  ///return a ResponseHandler object.
-  ///
-  ///if the load is successful, it returns a ResponseHandler as a success object,
-  ///otherwise it returns a ResponseHandler as an error object
-  ///```json:{
-  /// "type": "success" or "error",
-  /// "message": "ok",
-  /// "data": {}```
+  ///loadTesseractModel: load Tesseract5 model from the assets folder.
   ///
   /// ,[language] - language for tesseract4(en,spa,de,fr,it,nl,ru,pt,tr,zh)
   /// ,[tesseract4Config] - tesseract4 config
   Future<void> loadTesseractModel(
       {String? language, Map<String, String>? args});
 
-  ///tesseractOnFrame accept a byte List as input and
-  ///return a ResponseHandler object.
+  ///tesseractOnImage accept a byte as input and
+  ///return a List<String>.
   ///
-  ///if scanOnFrame run without error, it returns a ResponseHandler as a success object,
-  ///otherwise it returns a ResponseHandler as an error object.
-  ///
-  ///```json:{
-  ///  "type": 'success',
-  ///  "message": "ok",
-  ///  "data": List<Map<String, dynamic>>
-  /// }```
-  ///where map is mapped as follows:
-  ///
-  ///```Map<String, dynamic>:{
-  ///    "confidence": double,
-  ///    "box": {x1:double, y1:double, x2:double, y2:double},
-  ///    "text": String,
-  ///    "image": Uint8List,
-  ///    "tag": String
-  /// }```
-  ///
-  ///args: [bytesList] - image as byte list
+  ///args: [bytesList] - image as byte
   Future<List<String>> tesseractOnImage({required Uint8List bytesList});
 
-  /// dispose OCRModel, clean and save resources
+  /// dispose Tesseract model, clean and save resources
   Future<void> closeTesseractModel();
 }

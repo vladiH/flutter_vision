@@ -12,17 +12,15 @@ import com.vladih.computer_vision.flutter_vision.models.tesseract;
 import com.vladih.computer_vision.flutter_vision.models.Yolov5;
 import com.vladih.computer_vision.flutter_vision.utils.utils;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-
-import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
@@ -38,6 +36,10 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private  FlutterAssets assets;
   private Yolo yolo;
   private tesseract tesseract;
+
+  private ExecutorService executor;
+
+  private boolean isDetecting = false;
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
     setupChannel(binding.getApplicationContext(), binding.getFlutterAssets(), binding.getBinaryMessenger());
@@ -45,10 +47,16 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-    this.context = null;
-    this.methodChannel.setMethodCallHandler(null);
-    this.methodChannel = null;
-    this.assets = null;
+    try{
+      this.context = null;
+      this.methodChannel.setMethodCallHandler(null);
+      this.methodChannel = null;
+      this.assets = null;
+      this.executor.shutdownNow();
+    }catch (Exception e){
+      this.executor.isShutdown();
+      System.out.println(e.getMessage());
+    }
   }
 
   private void setupChannel(Context context, FlutterAssets assets, BinaryMessenger messenger) {
@@ -57,6 +65,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     this.context = context;
     this.methodChannel = new MethodChannel(messenger, CHANNEL_NAME);
     this.methodChannel.setMethodCallHandler(this);
+    this.executor = Executors.newSingleThreadExecutor();
   }
 
   @Override
@@ -88,6 +97,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     } else if(call.method.equals("loadTesseractModel")){
       try {
         tesseract = load_tesseract_model((Map) call.arguments);
+        result.success("ok");
       } catch (Exception e) {
         result.error("100","Error on load tesseract model", e);
       }
@@ -117,7 +127,8 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       Bitmap bitmap = utils.feedInputToBitmap(context.getApplicationContext(),image,image_height, image_width, 90);
       int [] shape = yolo.getInputTensor().shape();
       ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2], image_width, image_height, 0,255);
-      List<Map<String, Object>> yolo_results =  yolo.detectOnFrame(byteBuffer, image_height, image_width, iou_threshold, conf_threshold, class_threshold);
+
+      List<Map<String, Object>> yolo_results =  yolo.detect_task(byteBuffer, image_height, image_width, iou_threshold, conf_threshold, class_threshold);
       for (Map<String, Object> yolo_result:yolo_results) {
         float [] box = (float[]) yolo_result.get("box");
         if(class_is_text.contains((int)box[5])){
@@ -188,8 +199,41 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
   }
 
+  //https://www.baeldung.com/java-single-thread-executor-service
+  class DetectionTask implements Runnable {
+    private Yolo yolo;
+    private ByteBuffer byteBuffer;
+    private int height;
+    private int width;
+    private float iouThreshold;
+    private float confThreshold;
+    private float classThreshold;
+    private Result result;
+
+    public DetectionTask(Yolo yolo, ByteBuffer byteBuffer, int height, int width,
+                         float iouThreshold, float confThreshold, float classThreshold, Result result) {
+      this.yolo = yolo;
+      this.byteBuffer = byteBuffer;
+      this.height = height;
+      this.width = width;
+      this.iouThreshold = iouThreshold;
+      this.confThreshold = confThreshold;
+      this.classThreshold = classThreshold;
+      this.result = result;
+    }
+
+    @Override
+    public void run() {
+      try {
+        List<Map<String, Object>> detections = yolo.detect_task(byteBuffer, height, width, iouThreshold, confThreshold, classThreshold);
+//        isDetecting = false;
+        result.success(detections);
+      } catch (Exception e) {
+        result.error("100", "Detection Error", e);
+      }
+    }
+  }
   private void yolo_on_frame(Map<String, Object> args, Result result){
-    Bitmap bitmap = null;
     try {
       List<byte[]> image = (ArrayList) args.get("bytesList");
       int image_height = (int) args.get("image_height");
@@ -198,17 +242,16 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float conf_threshold = (float)(double)( args.get("conf_threshold"));
       float class_threshold = (float)(double)( args.get("class_threshold"));
       //invert width with height, because android take a photo rotating 90 degrees
-      bitmap = utils.feedInputToBitmap(context,image,image_height, image_width, 90);
+      Bitmap bitmap = utils.feedInputToBitmap(context,image,image_height, image_width, 90);
       int [] shape = yolo.getInputTensor().shape();
+      int src_width = bitmap.getWidth();
+      int src_height = bitmap.getHeight();
       ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2], image_width, image_height, 0,255);
-      result.success(yolo.detectOnFrame(byteBuffer, bitmap.getHeight(), bitmap.getWidth(), iou_threshold, conf_threshold, class_threshold));
+//    result.success(yolo.detectOnFrame(byteBuffer, bitmap.getHeight(), bitmap.getWidth(), iou_threshold, conf_threshold, class_threshold));
+      DetectionTask detectionTask = new DetectionTask(yolo, byteBuffer, src_height, src_width, iou_threshold, conf_threshold, class_threshold, result);
+      executor.submit(detectionTask);
     }catch (Exception e){
       result.error("100", "Detection Error", e);
-    }finally {
-      assert bitmap != null;
-      if(!bitmap.isRecycled()){
-        bitmap.recycle();
-      }
     }
   }
 
@@ -222,16 +265,23 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       float class_threshold = (float)(double)( args.get("class_threshold"));
       Bitmap bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
       int [] shape = yolo.getInputTensor().shape();
+      int src_width = bitmap.getWidth();
+      int src_height = bitmap.getHeight();
       ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2], image_width, image_height, 0,255);
-      result.success(yolo.detectOnImage(byteBuffer, image_height, image_width, iou_threshold, conf_threshold, class_threshold));
+      DetectionTask detectionTask = new DetectionTask(yolo, byteBuffer, src_height, src_width, iou_threshold, conf_threshold, class_threshold, result);
+      executor.submit(detectionTask);
     }catch (Exception e){
       result.error("100", "Detection Error", e);
     }
   }
 
   private void close_yolo_model(Result result){
-    yolo.close();
-    result.success("Yolo model closed succesfully");
+    try{
+      yolo.close();
+      result.success("Yolo model closed succesfully");
+    }catch (Exception e){
+      result.error("100", "Close_yolo_model error", e);
+    }
   }
 
   private tesseract load_tesseract_model(Map<String, Object> args) throws Exception {
@@ -246,11 +296,11 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private void tesseract_on_image(Map<String, Object> args, Result result){
     try {
       byte[] image = (byte[]) args.get("bytesList");
-      int image_height = (int) args.get("image_height");
-      int image_width = (int) args.get("image_width");
-      float iou_threshold = (float)(double)( args.get("iou_threshold"));
-      float conf_threshold = (float)(double)( args.get("conf_threshold"));
-      List<Integer> class_is_text = (List<Integer>) args.get("class_is_text");
+//      int image_height = (int) args.get("image_height");
+//      int image_width = (int) args.get("image_width");
+//      float iou_threshold = (float)(double)( args.get("iou_threshold"));
+//      float conf_threshold = (float)(double)( args.get("conf_threshold"));
+//      List<Integer> class_is_text = (List<Integer>) args.get("class_is_text");
       String data = tesseract.predict_text(image);
       result.success(data);
     }catch (Exception e){

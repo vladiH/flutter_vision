@@ -208,7 +208,7 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
       {String? language, Map<String, String>? args}) async {
     try {
       final String testData = await loadTessData();
-      await channel.invokeMethod<List<String>>('loadTesseractModel',
+      await channel.invokeMethod<String?>('loadTesseractModel',
           {'tess_data': testData, 'arg': args, 'language': language ?? 'eng'});
     } catch (e) {
       rethrow;
@@ -228,13 +228,13 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
 
   Future<List<String>> _tesseractOnImage({required Uint8List bytesList}) async {
     try {
-      final x = await channel.invokeMethod<List<String>>(
+      final x = await channel.invokeMethod<String?>(
         'tesseractOnImage',
         {
           "bytesList": bytesList,
         },
       );
-      return x ?? [];
+      return x == null ? [] : [x.toString()];
     } catch (e) {
       rethrow;
     }

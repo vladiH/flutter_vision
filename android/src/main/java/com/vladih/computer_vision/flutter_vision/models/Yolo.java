@@ -145,7 +145,7 @@ public class Yolo {
         }
     }
 
-    public List<Map<String, Object>> detectOnFrame(ByteBuffer byteBuffer,
+    public List<Map<String, Object>> detect_task(ByteBuffer byteBuffer,
                                                    int source_height,
                                                    int source_width,
                                                    float iou_threshold,
@@ -160,27 +160,6 @@ public class Yolo {
             throw e;
         }finally {
             byteBuffer.clear();
-        }
-    }
-
-    public List<Map<String, Object>> detectOnImage(ByteBuffer byteBuffer,
-                                                   int image_height,
-                                                   int image_width,
-                                                   float iou_threshold,
-                                                   float conf_threshold, float class_threshold)  throws  Exception{
-        try{
-            int[] shape = this.interpreter.getInputTensor(0).shape();
-            interpreter.run(byteBuffer, this.output);
-            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold, class_threshold, shape[1],shape[2]);
-            boxes = restore_size(boxes, shape[1],shape[2],image_width,image_height);
-            return out(boxes, this.labels);
-
-        }catch (Exception e){
-            throw e;
-        } finally {
-            if(byteBuffer != null){
-                byteBuffer.clear();
-            }
         }
     }
 

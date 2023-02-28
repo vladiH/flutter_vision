@@ -194,6 +194,12 @@ public class utils {
             return tensorImage.getBuffer();
         }catch (Exception e){
             throw e;
+
+        }finally {
+            assert bitmap != null;
+            if(!bitmap.isRecycled()){
+                bitmap.recycle();
+            }
         }
     }
     public static Bitmap feedInputToBitmap(Context context,
