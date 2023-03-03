@@ -216,7 +216,7 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
   }
 
   @override
-  Future<List<String>> tesseractOnImage({
+  Future<List<Map<String, dynamic>>> tesseractOnImage({
     required Uint8List bytesList,
   }) async {
     try {
@@ -226,15 +226,16 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
     }
   }
 
-  Future<List<String>> _tesseractOnImage({required Uint8List bytesList}) async {
+  Future<List<Map<String, dynamic>>> _tesseractOnImage(
+      {required Uint8List bytesList}) async {
     try {
-      final x = await channel.invokeMethod<String?>(
+      final x = await channel.invokeMethod<dynamic>(
         'tesseractOnImage',
         {
           "bytesList": bytesList,
         },
       );
-      return x == null ? [] : [x.toString()];
+      return x == null ? [] : [Map<String, dynamic>.from(x)];
     } catch (e) {
       rethrow;
     }

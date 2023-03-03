@@ -155,10 +155,19 @@ abstract class FlutterVision {
       {String? language, Map<String, String>? args});
 
   ///tesseractOnImage accept a byte as input and
-  ///return a List<String>.
+  ///return a List<Map<String, dynamic>.
+  ///
+  ///where map is mapped as follows:
+  ///
+  ///```Map<String, dynamic>:{
+  ///    "text": String
+  ///    "word_conf": List:int
+  ///    "mean_conf": int
+  /// }```
   ///
   ///args: [bytesList] - image as byte
-  Future<List<String>> tesseractOnImage({required Uint8List bytesList});
+  Future<List<Map<String, dynamic>>> tesseractOnImage(
+      {required Uint8List bytesList});
 
   /// dispose Tesseract model, clean and save resources
   Future<void> closeTesseractModel();

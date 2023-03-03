@@ -6,13 +6,15 @@ import android.graphics.BitmapFactory;
 
 import androidx.annotation.NonNull;
 
+import com.vladih.computer_vision.flutter_vision.models.Tesseract;
 import com.vladih.computer_vision.flutter_vision.models.Yolo;
 import com.vladih.computer_vision.flutter_vision.models.Yolov8;
-import com.vladih.computer_vision.flutter_vision.models.tesseract;
 import com.vladih.computer_vision.flutter_vision.models.Yolov5;
 import com.vladih.computer_vision.flutter_vision.utils.utils;
 
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -35,7 +37,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private Context context;
   private  FlutterAssets assets;
   private Yolo yolo;
-  private tesseract tesseract;
+  private Tesseract tesseract;
 
   private ExecutorService executor;
 
@@ -53,6 +55,8 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       this.methodChannel = null;
       this.assets = null;
       this.executor.shutdownNow();
+      this.yolo.close();
+      this.tesseract.close();
     }catch (Exception e){
       this.executor.isShutdown();
       System.out.println(e.getMessage());
@@ -99,7 +103,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         tesseract = load_tesseract_model((Map) call.arguments);
         result.success("ok");
       } catch (Exception e) {
-        result.error("100","Error on load tesseract model", e);
+        result.error("100","Error on load Tesseract model", e);
       }
     }else if(call.method.equals("tesseractOnImage")){
       tesseract_on_image((Map) call.arguments, result);
@@ -284,25 +288,46 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     }
   }
 
-  private tesseract load_tesseract_model(Map<String, Object> args) throws Exception {
+  private Tesseract load_tesseract_model(Map<String, Object> args) throws Exception {
     final String tess_data = args.get("tess_data").toString();
     final Map<String,String> arg = (Map<String,String>) args.get("arg");
     final String language = args.get("language").toString();
-    tesseract tss = new tesseract(tess_data, arg, language);
+    Tesseract tss = new Tesseract(tess_data, arg, language);
     tss.initialize_model();
     return tss;
   }
 
+  class PredictionTask implements Runnable {
+    private Tesseract tesseract;
+    private Bitmap bitmap;
+    private Result result;
+
+    public PredictionTask(Tesseract tesseract, Map<String, Object> args, Result result) {
+      byte[] image = (byte[]) args.get("bytesList");
+      this.tesseract = tesseract;
+      this.bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
+      this.result = result;
+    }
+
+    @Override
+    public void run() {
+      try {
+        Mat mat = utils.image_preprocessing(bitmap);
+        double angle = utils.computeSkewAngle(mat.clone());
+        mat = utils.deskew(mat,angle);
+        bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(mat,bitmap);
+        result.success(tesseract.predict_text(bitmap));
+      } catch (Exception e) {
+        result.error("100", "Prediction text Error", e);
+      }
+    }
+  }
+
   private void tesseract_on_image(Map<String, Object> args, Result result){
     try {
-      byte[] image = (byte[]) args.get("bytesList");
-//      int image_height = (int) args.get("image_height");
-//      int image_width = (int) args.get("image_width");
-//      float iou_threshold = (float)(double)( args.get("iou_threshold"));
-//      float conf_threshold = (float)(double)( args.get("conf_threshold"));
-//      List<Integer> class_is_text = (List<Integer>) args.get("class_is_text");
-      String data = tesseract.predict_text(image);
-      result.success(data);
+      PredictionTask predictionTask = new PredictionTask(tesseract, args, result);
+      executor.submit(predictionTask);
     }catch (Exception e){
       result.error("100", "Prediction Error", e);
     }

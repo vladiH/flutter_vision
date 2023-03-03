@@ -3,35 +3,20 @@ import static java.lang.Math.min;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.ImageFormat;
 import android.graphics.Matrix;
-import android.graphics.Paint;
 import android.os.Environment;
-import android.renderscript.Allocation;
-import android.renderscript.Element;
-import android.renderscript.RenderScript;
-import android.renderscript.ScriptIntrinsicYuvToRGB;
-import android.renderscript.Type;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
-import org.opencv.core.RotatedRect;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
-import org.tensorflow.lite.DataType;
-import org.tensorflow.lite.Tensor;
-import org.tensorflow.lite.support.image.ImageProcessor;
+import org.opencv.photo.Photo;
 import org.tensorflow.lite.support.image.TensorImage;
-import org.tensorflow.lite.support.image.ops.ResizeOp;
-import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp;
-import org.tensorflow.lite.support.image.ops.Rot90Op;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -39,75 +24,17 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class utils {
-
-    /*
-    args:
-        model_outputs:[1,25200,[xc,yc, w, h, confidence, class....]]
-    out:
-        List<[x1,y1, x2, y2, confidence, class]>
-     */
-    /*
-    // test is a 3d array
-        double[][][] m = {
-                            {
-                                {
-                                  0.011428807862102985, 0.006756599526852369, 0.04274776205420494, 0.034441519528627396, 0.50012877583503723145, 0.33658933639526367, 0.4722323715686798,
-                                },
-                                {
-                                  0.023071227595210075, 0.006947836373001337, 0.046426184475421906, 0.023744791746139526, 0.3002465546131134033, 0.29862138628959656, 0.4498370885848999,
-                                },
-                                {
-                                  0.03636947274208069, 0.006819264497607946, 0.04913407564163208, 0.025004519149661064, 0.90013208389282226562, 0.3155967593193054, 0.4081345796585083
-                                }
-                                ,
-                                {
-                                  0.03636947274208069, 0.006819264497607946, 0.04913407564163208, 0.025004519149661064, 0.00013208389282226562, 0.3155967593193054, 0.4081345796585083
-                                },
-                                {
-                                  0.04930267855525017, 0.007249316666275263, 0.04969717934727669, 0.023645592853426933, 0.0001222355494974181, 0.3123127520084381, 0.40113094449043274
-                                }
-                            }
-                        };
-
-        // for..each loop to iterate through elements of 3d array
-        float[][][] save = new float[1][5][7];
-        for (int i = 0; i < 1; i++)
-            for (int j = 0; j < 5; j++)
-                for (int k = 0; k < 7; k++)     // These 2 lines could be replaced by
-                    save[i][j][k] = (float) m[i][j][k];
-
-        final List<float []> result = Utils.filter_box(save, 0.3f, 0.3f, 1,1);
-
-        for(float[] x:result){
-            for(float v : x){
-                System.out.print(v);
-                System.out.print(" ");
-            }
-            System.out.println("");
-        }
-    }*/
-
-
     public static Bitmap crop_bitmap(Bitmap bitmap, float x1, float y1, float x2, float y2) throws Exception {
         try{
             final int x = Math.max((int)x1,0);
             final int y = Math.max((int)y1,0);
             final int width = Math.abs((int)(x2-x1));
             final int height = Math.abs((int)(y2-y1));
-            //System.out.println("CROPPP");
-            //System.out.println(String.valueOf(x)+" "+String.valueOf(y)+" "+String.valueOf(width)+" "+String.valueOf(height));
-
             return  Bitmap.createBitmap(bitmap,x,y,width,height);
         }catch (Exception e){
-            //System.out.println("CROPPP ERROR");
-            //System.out.println(String.valueOf(x1)+" "+String.valueOf(y1)+" "+String.valueOf(x2)+" "+String.valueOf(y2));
-            //System.out.println(String.valueOf(bitmap.getWidth())+" "+String.valueOf(bitmap.getHeight()));
             throw  new Exception(e.getMessage());
         }
     }
@@ -141,36 +68,74 @@ public class utils {
         }
         return bitmap;
     }
-
-    public static Mat deskew(Mat src, double angle) {
-        Point center = new Point(src.width()/2.0, src.height()/2.0);
-        Mat rotImage = Imgproc.getRotationMatrix2D(center, angle, 1.0);
-        //1.0 means 100 % scale
-        Size size = new Size(src.width(), src.height());
-        Imgproc.warpAffine(src, src, rotImage, size,
-                Imgproc.INTER_CUBIC+ Imgproc.CV_WARP_FILL_OUTLIERS,Core.BORDER_REPLICATE);
-        return src;
+    public static Mat image_preprocessing(Bitmap bitmap){
+        try {
+            Mat mat = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC1);
+            Utils.bitmapToMat(bitmap,mat);
+            Photo.fastNlMeansDenoisingColored(mat,mat,10,10,3,21);
+            Core.normalize(mat,mat, 0, 255, Core.NORM_MINMAX);
+            Photo.fastNlMeansDenoisingColored(mat,mat,10,10,3,21);
+            Imgproc.cvtColor(mat,mat, Imgproc.COLOR_RGB2GRAY);
+            Imgproc.GaussianBlur(mat, mat, new Size(3,3), 1);
+            Imgproc.adaptiveThreshold(mat,mat,255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,Imgproc.THRESH_BINARY,13,4);
+            return mat;
+        }catch (Exception e){
+            throw e;
+        }
+    }
+    public static Mat deskew(Mat image, double skewAngle) {
+        try {
+            Mat rotationMatrix = Imgproc.getRotationMatrix2D(new Point(image.width() / 2, image.height() / 2), -skewAngle, 1);
+            Scalar borderValue = new Scalar(255); // white border value
+            // Crop the output image to remove border artifacts
+            Rect cropRect = new Rect(0, 0, image.width(), image.height());
+//            System.out.println(image.size());
+//            System.out.println(skewAngle);
+            Imgproc.warpAffine(image, image, rotationMatrix, image.size(), Imgproc.INTER_CUBIC + Imgproc.WARP_FILL_OUTLIERS, Core.BORDER_CONSTANT, borderValue);
+            image = image.submat(cropRect);
+            return image;
+        }catch (Exception e){
+            throw e;
+        }
     }
 
     //input:binary matrix
-    public  static double computeSkewAngle(Mat img){
-        //Invert the colors (because objects are represented as white pixels, and the background is represented by black pixels)
-        Core.bitwise_not( img, img );
-        Mat element = Imgproc.getStructuringElement(Imgproc.MORPH_RECT,
-                new Size(5, 5));
-        //We can now perform our erosion, we must declare our rectangle-shaped structuring element and call the erode function
-        Imgproc.dilate(img, img, element,new Point(-1,-1),4);
-        Bitmap bmp = Bitmap.createBitmap((int)img.width(), (int)img.height(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(img, bmp);
-        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
-        Mat hierarchy  = new Mat();
-        Imgproc.findContours(img,contours,hierarchy ,Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-        Collections.sort(contours,(x,y)->Double.compare(Imgproc.contourArea(y),Imgproc.contourArea(x)));
-        MatOfPoint2f dst = new MatOfPoint2f();
-        contours.get(0).convertTo(dst,CvType.CV_32F);
-        RotatedRect rotatedRect = Imgproc.minAreaRect(dst);
-        rotatedRect.angle = rotatedRect.angle < -45 ? rotatedRect.angle + 90.f : rotatedRect.angle;
-        return rotatedRect.angle;
+    public static double computeSkewAngle(Mat image) {
+        try {
+            // Apply Canny edge detection to find the edges in the image
+            // or convert letter and background to white and black color respectively
+//          Imgproc.Canny(image, image, 50, 200, 3);
+            Core.bitwise_not(image, image);
+            // Apply the Hough transform to find the lines in the image
+            Mat lines = new Mat();
+            Imgproc.HoughLines(image, lines, 1, Math.PI / 180, 100);
+
+            // Compute the average angle of the lines
+            double angle = 0.0;
+            int numLines = lines.cols();
+            if (numLines > 0) {
+                for (int i = 0; i < numLines; i++) {
+                    double[] data = lines.get(0, i);
+                    double rho = data[0];
+                    double theta = data[1];
+
+                    // Convert the line from polar to Cartesian coordinates
+                    double a = Math.cos(theta);
+                    double b = Math.sin(theta);
+                    double x0 = a * rho;
+                    double y0 = b * rho;
+                    // Compute the angle of the line in radians and add it to the total angle
+                    angle += Math.atan2(y0, x0);
+                }
+            } else {
+                // No lines were detected, so set the angle to zero
+                angle = 0.0;
+            }
+            // Convert the angle from radians to degrees and return it
+            return 90-(angle * 180 / Math.PI);
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
 

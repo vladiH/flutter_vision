@@ -97,7 +97,8 @@ abstract class BaseFlutterVision {
   Future<void> loadTesseractModel(
       {String? language, Map<String, String>? args});
 
-  Future<List<String>> tesseractOnImage({required Uint8List bytesList});
+  Future<List<Map<String, dynamic>>> tesseractOnImage(
+      {required Uint8List bytesList});
 
   Future<void> closeTesseractModel() async {
     await channel.invokeMethod('closeTesseractModel');

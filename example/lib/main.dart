@@ -190,9 +190,9 @@ class _YoloVideoState extends State<YoloVideo> {
 
   @override
   void dispose() async {
+    super.dispose();
     controller.dispose();
     await vision.closeYoloModel();
-    super.dispose();
   }
 
   @override
@@ -362,8 +362,8 @@ class _YoloImageState extends State<YoloImage> {
 
   @override
   void dispose() async {
-    await vision.closeYoloModel();
     super.dispose();
+    await vision.closeYoloModel();
   }
 
   @override
@@ -486,7 +486,7 @@ class TesseractImage extends StatefulWidget {
 
 class _TesseractImageState extends State<TesseractImage> {
   late FlutterVision vision;
-  late List<String> tesseractResults = [];
+  late List<Map<String, dynamic>> tesseractResults = [];
   File? imageFile;
   bool isLoaded = false;
 
@@ -504,8 +504,8 @@ class _TesseractImageState extends State<TesseractImage> {
 
   @override
   void dispose() async {
-    await vision.closeTesseractModel();
     super.dispose();
+    await vision.closeTesseractModel();
   }
 
   @override
@@ -517,13 +517,14 @@ class _TesseractImageState extends State<TesseractImage> {
         ),
       );
     }
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        imageFile != null ? Image.file(imageFile!) : const SizedBox(),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Row(
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          imageFile != null ? Image.file(imageFile!) : const SizedBox(),
+          tesseractResults.isEmpty
+              ? const SizedBox()
+              : Align(child: Text(tesseractResults[0]["text"])),
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               TextButton(
@@ -536,11 +537,8 @@ class _TesseractImageState extends State<TesseractImage> {
               )
             ],
           ),
-        ),
-        tesseractResults.isEmpty
-            ? const SizedBox()
-            : Align(child: Text(tesseractResults[0])),
-      ],
+        ],
+      ),
     );
   }
 
