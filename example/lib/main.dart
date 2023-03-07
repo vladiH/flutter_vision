@@ -255,7 +255,7 @@ class _YoloVideoState extends State<YoloVideo> {
 
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
-        labels: 'assets/labelss.txt',
+        labels: 'assets/labels.txt',
         modelPath: 'assets/yolov5n.tflite',
         modelVersion: "yolov5",
         numThreads: 1,
@@ -404,7 +404,7 @@ class _YoloImageState extends State<YoloImage> {
 
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
-        labels: 'assets/labelss.txt',
+        labels: 'assets/labels.txt',
         modelPath: 'assets/yolov5n.tflite',
         modelVersion: "yolov5",
         numThreads: 2,
