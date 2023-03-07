@@ -3,6 +3,7 @@ package com.vladih.computer_vision.flutter_vision;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 
 import androidx.annotation.NonNull;
 
@@ -237,43 +238,95 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       }
     }
   }
+
+  class DetectionTasks implements Runnable {
+    private static volatile DetectionTasks instance;
+    private Yolo yolo;
+    byte[] image;
+
+    List<byte[]> frame;
+    int image_height;
+    int image_width;
+    float iou_threshold;
+    float conf_threshold;
+    float class_threshold;
+
+    String typing;
+    private Result result;
+
+    public DetectionTasks(Yolo yolo, Map<String, Object> args, String typing, Result result) {
+      this.typing = typing;
+      this.yolo = yolo;
+      if(typing=="img"){
+        this.image = (byte[]) args.get("bytesList");
+      }else {
+        this.frame = (ArrayList) args.get("bytesList");
+      }
+      this.image_height = (int) args.get("image_height");
+      this.image_width = (int) args.get("image_width");
+      this.iou_threshold = (float)(double)( args.get("iou_threshold"));
+      this.conf_threshold = (float)(double)( args.get("conf_threshold"));
+      this.class_threshold = (float)(double)( args.get("class_threshold"));
+      this.result = result;
+    }
+
+    private DetectionTasks() {
+      // Private constructor to prevent instantiation by other classes
+    }
+
+    public static DetectionTasks getInstance(Yolo yolo, Map<String, Object> args, String typing, Result result) {
+      if (instance == null) {
+        synchronized (DetectionTasks.class) {
+          if (instance == null) {
+            instance = new DetectionTasks(yolo, args, typing, result);
+          }
+        }
+      }
+      return instance;
+    }
+    @Override
+    public void run() {
+      try {
+        Bitmap bitmap;
+        if(typing=="img"){
+          bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
+        }
+        else{
+          //rotate image, because android take a photo rotating 90 degrees
+          bitmap = utils.feedInputToBitmap(context,frame,image_height, image_width, 90);
+        }
+        int [] shape = yolo.getInputTensor().shape();
+        int src_width = bitmap.getWidth();
+        int src_height = bitmap.getHeight();
+        ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2], src_width, src_height, 0,255);
+        List<Map<String, Object>> detections = yolo.detect_task(byteBuffer, src_height, src_width, iou_threshold, conf_threshold, class_threshold);
+        isDetecting = false;
+        result.success(detections);
+      } catch (Exception e) {
+        result.error("100", "Detection Error", e);
+      }
+    }
+  }
   private void yolo_on_frame(Map<String, Object> args, Result result){
     try {
-      List<byte[]> image = (ArrayList) args.get("bytesList");
-      int image_height = (int) args.get("image_height");
-      int image_width = (int) args.get("image_width");
-      float iou_threshold = (float)(double)( args.get("iou_threshold"));
-      float conf_threshold = (float)(double)( args.get("conf_threshold"));
-      float class_threshold = (float)(double)( args.get("class_threshold"));
-      //invert width with height, because android take a photo rotating 90 degrees
-      Bitmap bitmap = utils.feedInputToBitmap(context,image,image_height, image_width, 90);
-      int [] shape = yolo.getInputTensor().shape();
-      int src_width = bitmap.getWidth();
-      int src_height = bitmap.getHeight();
-      ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2], image_width, image_height, 0,255);
-//    result.success(yolo.detectOnFrame(byteBuffer, bitmap.getHeight(), bitmap.getWidth(), iou_threshold, conf_threshold, class_threshold));
-      DetectionTask detectionTask = new DetectionTask(yolo, byteBuffer, src_height, src_width, iou_threshold, conf_threshold, class_threshold, result);
-      executor.submit(detectionTask);
+      if (isDetecting){
+        result.success(new ArrayList<>());
+      }else{
+        DetectionTasks detectionTask = new DetectionTasks(yolo,  args, "frame", result);
+        executor.submit(detectionTask);
+      }
     }catch (Exception e){
       result.error("100", "Detection Error", e);
     }
   }
-
   private void yolo_on_image(Map<String, Object> args, Result result){
     try {
-      byte[] image = (byte[]) args.get("bytesList");
-      int image_height = (int) args.get("image_height");
-      int image_width = (int) args.get("image_width");
-      float iou_threshold = (float)(double)( args.get("iou_threshold"));
-      float conf_threshold = (float)(double)( args.get("conf_threshold"));
-      float class_threshold = (float)(double)( args.get("class_threshold"));
-      Bitmap bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
-      int [] shape = yolo.getInputTensor().shape();
-      int src_width = bitmap.getWidth();
-      int src_height = bitmap.getHeight();
-      ByteBuffer byteBuffer = utils.feedInputTensor(bitmap, shape[1], shape[2], image_width, image_height, 0,255);
-      DetectionTask detectionTask = new DetectionTask(yolo, byteBuffer, src_height, src_width, iou_threshold, conf_threshold, class_threshold, result);
-      executor.submit(detectionTask);
+      if (isDetecting){
+        result.success(new ArrayList<>());
+      }else{
+        DetectionTasks detectionTask = new DetectionTasks(yolo,  args, "img", result);
+        executor.submit(detectionTask);
+      }
     }catch (Exception e){
       result.error("100", "Detection Error", e);
     }
@@ -312,11 +365,13 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     @Override
     public void run() {
       try {
-        Mat mat = utils.image_preprocessing(bitmap);
+        Mat mat = utils.rgbBitmapToMatGray(bitmap);
         double angle = utils.computeSkewAngle(mat.clone());
         mat = utils.deskew(mat,angle);
+        mat = utils.filterTextFromImage(mat);
         bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(mat,bitmap);
+//        utils.getScreenshotBmp(bitmap,"TESSEREACT");
         result.success(tesseract.predict_text(bitmap));
       } catch (Exception e) {
         result.error("100", "Prediction text Error", e);
