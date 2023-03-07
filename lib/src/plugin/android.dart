@@ -4,81 +4,81 @@ import '../../flutter_vision.dart';
 import 'base.dart';
 
 class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
-  @override
-  Future<void> loadOcrModel(
-      {required String modelPath,
-      required String labels,
-      int? numThreads,
-      bool? useGpu,
-      String? language,
-      Map<String, String>? args}) async {
-    try {
-      final String testData = await loadTessData();
-      await channel.invokeMethod<String>('loadOcrModel', {
-        'model_path': modelPath,
-        'is_asset': true,
-        'num_threads': numThreads ?? 1,
-        'use_gpu': useGpu ?? false,
-        'label_path': labels,
-        'image_mean': 0.0,
-        'image_std': 255.0,
-        'rotation': 90,
-        'tess_data': testData,
-        'arg': args,
-        'language': language ?? 'eng'
-      });
-    } catch (e) {
-      rethrow;
-    }
-  }
+  // @override
+  // Future<void> loadOcrModel(
+  //     {required String modelPath,
+  //     required String labels,
+  //     int? numThreads,
+  //     bool? useGpu,
+  //     String? language,
+  //     Map<String, String>? args}) async {
+  //   try {
+  //     final String testData = await loadTessData();
+  //     await channel.invokeMethod<String>('loadOcrModel', {
+  //       'model_path': modelPath,
+  //       'is_asset': true,
+  //       'num_threads': numThreads ?? 1,
+  //       'use_gpu': useGpu ?? false,
+  //       'label_path': labels,
+  //       'image_mean': 0.0,
+  //       'image_std': 255.0,
+  //       'rotation': 90,
+  //       'tess_data': testData,
+  //       'arg': args,
+  //       'language': language ?? 'eng'
+  //     });
+  //   } catch (e) {
+  //     rethrow;
+  //   }
+  // }
 
-  @override
-  Future<List<Map<String, dynamic>>> ocrOnFrame({
-    required List<Uint8List> bytesList,
-    required int imageHeight,
-    required int imageWidth,
-    required List<int> classIsText,
-    double? iouThreshold,
-    double? confThreshold,
-  }) async {
-    try {
-      return await _ocrOnFrame(
-          bytesList: bytesList,
-          imageHeight: imageHeight,
-          imageWidth: imageWidth,
-          iouThreshold: iouThreshold ?? 0.4,
-          confThreshold: confThreshold ?? 0.5,
-          classIsText: classIsText);
-    } catch (e) {
-      rethrow;
-    }
-  }
+  // @override
+  // Future<List<Map<String, dynamic>>> ocrOnFrame({
+  //   required List<Uint8List> bytesList,
+  //   required int imageHeight,
+  //   required int imageWidth,
+  //   required List<int> classIsText,
+  //   double? iouThreshold,
+  //   double? confThreshold,
+  // }) async {
+  //   try {
+  //     return await _ocrOnFrame(
+  //         bytesList: bytesList,
+  //         imageHeight: imageHeight,
+  //         imageWidth: imageWidth,
+  //         iouThreshold: iouThreshold ?? 0.4,
+  //         confThreshold: confThreshold ?? 0.5,
+  //         classIsText: classIsText);
+  //   } catch (e) {
+  //     rethrow;
+  //   }
+  // }
 
-  Future<List<Map<String, dynamic>>> _ocrOnFrame({
-    required List<Uint8List> bytesList,
-    required int imageHeight,
-    required int imageWidth,
-    required double iouThreshold,
-    required double confThreshold,
-    required List<int> classIsText,
-  }) async {
-    try {
-      final x = await channel.invokeMethod<List<Map<String, dynamic>>>(
-        'ocrOnFrame',
-        {
-          "bytesList": bytesList,
-          "image_height": imageHeight,
-          "image_width": imageWidth,
-          "iou_threshold": iouThreshold,
-          "conf_threshold": confThreshold,
-          "class_is_text": classIsText
-        },
-      );
-      return x ?? [];
-    } catch (e) {
-      rethrow;
-    }
-  }
+  // Future<List<Map<String, dynamic>>> _ocrOnFrame({
+  //   required List<Uint8List> bytesList,
+  //   required int imageHeight,
+  //   required int imageWidth,
+  //   required double iouThreshold,
+  //   required double confThreshold,
+  //   required List<int> classIsText,
+  // }) async {
+  //   try {
+  //     final x = await channel.invokeMethod<List<Map<String, dynamic>>>(
+  //       'ocrOnFrame',
+  //       {
+  //         "bytesList": bytesList,
+  //         "image_height": imageHeight,
+  //         "image_width": imageWidth,
+  //         "iou_threshold": iouThreshold,
+  //         "conf_threshold": confThreshold,
+  //         "class_is_text": classIsText
+  //       },
+  //     );
+  //     return x ?? [];
+  //   } catch (e) {
+  //     rethrow;
+  //   }
+  // }
 
   @override
   Future<void> loadYoloModel(
@@ -148,7 +148,7 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
           ? x!.map((e) => Map<String, dynamic>.from(e)).toList()
           : [];
     } catch (e) {
-      print(e);
+      // print(e);
       rethrow;
     }
   }

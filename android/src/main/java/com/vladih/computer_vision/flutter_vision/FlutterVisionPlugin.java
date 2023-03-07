@@ -43,6 +43,8 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private ExecutorService executor;
 
   private boolean isDetecting = false;
+
+  private static ArrayList<Map<String, Object>> empty = new ArrayList<>();
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
     setupChannel(binding.getApplicationContext(), binding.getFlutterAssets(), binding.getBinaryMessenger());
@@ -206,41 +208,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
   //https://www.baeldung.com/java-single-thread-executor-service
   class DetectionTask implements Runnable {
-    private Yolo yolo;
-    private ByteBuffer byteBuffer;
-    private int height;
-    private int width;
-    private float iouThreshold;
-    private float confThreshold;
-    private float classThreshold;
-    private Result result;
-
-    public DetectionTask(Yolo yolo, ByteBuffer byteBuffer, int height, int width,
-                         float iouThreshold, float confThreshold, float classThreshold, Result result) {
-      this.yolo = yolo;
-      this.byteBuffer = byteBuffer;
-      this.height = height;
-      this.width = width;
-      this.iouThreshold = iouThreshold;
-      this.confThreshold = confThreshold;
-      this.classThreshold = classThreshold;
-      this.result = result;
-    }
-
-    @Override
-    public void run() {
-      try {
-        List<Map<String, Object>> detections = yolo.detect_task(byteBuffer, height, width, iouThreshold, confThreshold, classThreshold);
-//        isDetecting = false;
-        result.success(detections);
-      } catch (Exception e) {
-        result.error("100", "Detection Error", e);
-      }
-    }
-  }
-
-  class DetectionTasks implements Runnable {
-    private static volatile DetectionTasks instance;
+//    private static volatile DetectionTasks instance;
     private Yolo yolo;
     byte[] image;
 
@@ -254,7 +222,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     String typing;
     private Result result;
 
-    public DetectionTasks(Yolo yolo, Map<String, Object> args, String typing, Result result) {
+    public DetectionTask(Yolo yolo, Map<String, Object> args, String typing, Result result) {
       this.typing = typing;
       this.yolo = yolo;
       if(typing=="img"){
@@ -270,20 +238,20 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
       this.result = result;
     }
 
-    private DetectionTasks() {
-      // Private constructor to prevent instantiation by other classes
-    }
+//    private DetectionTasks() {
+//      // Private constructor to prevent instantiation by other classes
+//    }
 
-    public static DetectionTasks getInstance(Yolo yolo, Map<String, Object> args, String typing, Result result) {
-      if (instance == null) {
-        synchronized (DetectionTasks.class) {
-          if (instance == null) {
-            instance = new DetectionTasks(yolo, args, typing, result);
-          }
-        }
-      }
-      return instance;
-    }
+//    public static DetectionTasks getInstance(Yolo yolo, Map<String, Object> args, String typing, Result result) {
+//      if (instance == null) {
+//        synchronized (DetectionTasks.class) {
+//          if (instance == null) {
+//            instance = new DetectionTasks(yolo, args, typing, result);
+//          }
+//        }
+//      }
+//      return instance;
+//    }
     @Override
     public void run() {
       try {
@@ -310,9 +278,10 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private void yolo_on_frame(Map<String, Object> args, Result result){
     try {
       if (isDetecting){
-        result.success(new ArrayList<>());
+        result.success(empty);
       }else{
-        DetectionTasks detectionTask = new DetectionTasks(yolo,  args, "frame", result);
+        isDetecting = true;
+        DetectionTask detectionTask = new DetectionTask(yolo,  args, "frame", result);
         executor.submit(detectionTask);
       }
     }catch (Exception e){
@@ -322,9 +291,10 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   private void yolo_on_image(Map<String, Object> args, Result result){
     try {
       if (isDetecting){
-        result.success(new ArrayList<>());
+        result.success(empty);
       }else{
-        DetectionTasks detectionTask = new DetectionTasks(yolo,  args, "img", result);
+        isDetecting = true;
+        DetectionTask detectionTask = new DetectionTask(yolo,  args, "img", result);
         executor.submit(detectionTask);
       }
     }catch (Exception e){
@@ -371,7 +341,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         mat = utils.filterTextFromImage(mat);
         bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(mat,bitmap);
-//        utils.getScreenshotBmp(bitmap,"TESSEREACT");
+        utils.getScreenshotBmp(bitmap,"TESSEREACT");
         result.success(tesseract.predict_text(bitmap));
       } catch (Exception e) {
         result.error("100", "Prediction text Error", e);
@@ -389,6 +359,11 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
   }
 
   private void close_tesseract_model(Result result){
-    tesseract.close();
+    try{
+      tesseract.close();
+      result.success("Tesseract model closed succesfully");
+    }catch (Exception e){
+      result.error("100", "close_tesseract_model error", e);
+    }
   }
 }

@@ -104,6 +104,11 @@ public class utils {
                     Mat crop = mat.submat(box);
                     Core.normalize(crop, crop, 0, 255, Core.NORM_MINMAX);
                     Imgproc.threshold(crop, crop, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+                    Scalar meanScalar = Core.mean(crop);
+                    double meanValue = meanScalar.val[0];
+                    if (meanValue<100){
+                        continue;
+                    }
                     Mat roi = new_image.submat(new Rect(box.x, box.y, box.width, box.height));
                     Core.bitwise_and(crop,roi,roi);
                 }catch (Exception e){
@@ -143,7 +148,7 @@ public class utils {
 
             List<Rect> next_boxes = new ArrayList<>();
             for (Rect box : boxes) {
-                if (!contain(current, box)) {
+                if (!contain(current, box) && (box.width/ box.height)>1) {
                     next_boxes.add(box);
                 }
             }
@@ -188,7 +193,7 @@ public class utils {
                 if (Math.abs(rect.y - prevRect.y) > prevRect.height * 0.5) {
                     mergedBoxes.add(rect);
                 } else {
-                    if(Math.abs(rect.x - prevRect.x) <= prevRect.width){
+                    if(rect.x - (prevRect.x + prevRect.width)> 0){
                         mergedBoxes.add(rect);
                     }
                     else{
@@ -217,7 +222,7 @@ public class utils {
             double area = rect.width * rect.height;
             double aspectRatio = (double)rect.width / rect.height;
             //remove rect that doesn't satisface this rules
-            if (area > 100 && aspectRatio > 0.4 && aspectRatio < 5) {
+            if (area > 80 && aspectRatio > 0.4 && aspectRatio < 5) {
                 height += rect.height;
                 filteredContours.add(new Rect((int)Math.max(0, rect.x-rect.height/2), rect.y, (int)Math.min(image.width(),rect.width+rect.height), rect.height));
             }
@@ -239,7 +244,7 @@ public class utils {
             // Crop the output image to remove border artifacts
             Rect cropRect = new Rect(0, 0, image.width(), image.height());
 //            System.out.println(image.size());
-            System.out.println(skewAngle);
+//            System.out.println(skewAngle);
             Imgproc.warpAffine(image, image, rotationMatrix, image.size(), Imgproc.INTER_CUBIC + Imgproc.WARP_FILL_OUTLIERS, Core.BORDER_CONSTANT, borderValue);
             image = image.submat(cropRect);
             return image;

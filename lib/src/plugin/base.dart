@@ -43,26 +43,26 @@ abstract class BaseFlutterVision {
     }
   }
 
-  Future<void> loadOcrModel(
-      {required String modelPath,
-      required String labels,
-      int? numThreads,
-      bool? useGpu,
-      String? language,
-      Map<String, String>? args});
+  // Future<void> loadOcrModel(
+  //     {required String modelPath,
+  //     required String labels,
+  //     int? numThreads,
+  //     bool? useGpu,
+  //     String? language,
+  //     Map<String, String>? args});
 
-  Future<List<Map<String, dynamic>>> ocrOnFrame({
-    required List<Uint8List> bytesList,
-    required int imageHeight,
-    required int imageWidth,
-    required List<int> classIsText,
-    double? iouThreshold,
-    double? confThreshold,
-  });
+  // Future<List<Map<String, dynamic>>> ocrOnFrame({
+  //   required List<Uint8List> bytesList,
+  //   required int imageHeight,
+  //   required int imageWidth,
+  //   required List<int> classIsText,
+  //   double? iouThreshold,
+  //   double? confThreshold,
+  // });
 
-  Future<void> closeOcrModel() async {
-    await channel.invokeMethod('closeOcrModel');
-  }
+  // Future<void> closeOcrModel() async {
+  //   await channel.invokeMethod('closeOcrModel');
+  // }
 
   Future<void> loadYoloModel({
     required String modelPath,

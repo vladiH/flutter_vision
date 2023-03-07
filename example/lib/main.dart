@@ -271,7 +271,7 @@ class _YoloVideoState extends State<YoloVideo> {
         imageHeight: cameraImage.height,
         imageWidth: cameraImage.width,
         iouThreshold: 0.4,
-        confThreshold: 0.8,
+        confThreshold: 0.4,
         classThreshold: 0.5);
     if (result.isNotEmpty) {
       setState(() {
@@ -297,6 +297,7 @@ class _YoloVideoState extends State<YoloVideo> {
     setState(() {
       yoloResults.clear();
       isDetecting = false;
+      controller.dispose();
     });
   }
 
