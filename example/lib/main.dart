@@ -1,79 +1,198 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'dart:async';
 import 'package:flutter_vision/flutter_vision.dart';
+import 'package:image_picker/image_picker.dart';
 
-enum Models { yolov5, ocr }
+enum Options { none, image, frame, tesseract, vision }
 
 late List<CameraDescription> cameras;
-Future<void> main() async {
+main() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
-  cameras = await availableCameras();
   runApp(
     const MaterialApp(
-      home: MyApp(model: Models.yolov5),
+      home: MyApp(),
     ),
   );
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({required this.model, Key? key}) : super(key: key);
-  final Models model;
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  late CameraController controller;
-  late FlutterVision vision;
-  late List<Map<String, dynamic>> modelResults;
-  bool isLoaded = false;
-  bool isDetecting = false;
+  Options option = Options.none;
   @override
   void initState() {
     super.initState();
-    controller = CameraController(cameras[0], ResolutionPreset.max);
-    controller.initialize().then((_) {
-      if (!mounted) {
-        return;
-      }
-      vision = FlutterVision();
-      switch (widget.model) {
-        case Models.ocr:
-          loadOcrModel().then((value) {
-            setState(() {
-              isLoaded = true;
-              isDetecting = false;
-              modelResults = [];
-            });
-          });
-          break;
-        case Models.yolov5:
-          loadYoloModel().then((value) {
-            setState(() {
-              isLoaded = true;
-              isDetecting = false;
-              modelResults = [];
-            });
-          });
-          break;
-        default:
-          break;
-      }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: task(option),
+      floatingActionButton: SpeedDial(
+        //margin bottom
+        icon: Icons.menu, //icon on Floating action button
+        activeIcon: Icons.close, //icon when menu is expanded on button
+        backgroundColor: Colors.black12, //background color of button
+        foregroundColor: Colors.white, //font color, icon color in button
+        activeBackgroundColor:
+            Colors.deepPurpleAccent, //background color when menu is expanded
+        activeForegroundColor: Colors.white,
+        visible: true,
+        closeManually: false,
+        curve: Curves.bounceIn,
+        overlayColor: Colors.black,
+        overlayOpacity: 0.5,
+        buttonSize: const Size(56.0, 56.0),
+        children: [
+          SpeedDialChild(
+            //speed dial child
+            child: const Icon(Icons.video_call),
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            label: 'Yolo on Frame',
+            labelStyle: const TextStyle(fontSize: 18.0),
+            onTap: () {
+              setState(() {
+                option = Options.frame;
+              });
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.camera),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            label: 'Yolo on Image',
+            labelStyle: const TextStyle(fontSize: 18.0),
+            onTap: () {
+              setState(() {
+                option = Options.image;
+              });
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.text_snippet_outlined),
+            foregroundColor: Colors.white,
+            backgroundColor: Colors.green,
+            label: 'Tesseract',
+            labelStyle: const TextStyle(fontSize: 18.0),
+            onTap: () {
+              setState(() {
+                option = Options.tesseract;
+              });
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.document_scanner),
+            foregroundColor: Colors.white,
+            backgroundColor: Colors.green,
+            label: 'Vision',
+            labelStyle: const TextStyle(fontSize: 18.0),
+            onTap: () {
+              setState(() {
+                option = Options.vision;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget task(Options option) {
+    if (option == Options.frame) {
+      return YoloVideo();
+    }
+    if (option == Options.image) {
+      return YoloImage();
+    }
+    if (option == Options.tesseract) {
+      return const TesseractImage();
+    }
+    return const Center(child: Text("Choose Task"));
+  }
+  // Future<void> loadOcrModel() async {
+  //   await vision.loadOcrModel(
+  //       labels: 'assets/labels.txt',
+  //       modelPath: 'assets/best-fp16.tflite',
+  //       args: {
+  //         'psm': '11',
+  //         'oem': '1',
+  //         'preserve_interword_spaces': '1',
+  //       },
+  //       language: 'spa',
+  //       numThreads: 1,
+  //       useGpu: false);
+  //   setState(() {
+  //     isLoaded = true;
+  //   });
+  // }
+  // ocrOnFrame(CameraImage cameraImage) async {
+  //   final result = await vision.ocrOnFrame(
+  //       bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
+  //       imageHeight: cameraImage.height,
+  //       imageWidth: cameraImage.width,
+  //       classIsText: [0],
+  //       iouThreshold: 0.6,
+  //       confThreshold: 0.8);
+  //   setState(() {
+  //     yoloResults = result;
+  //   });
+  // }
+}
+
+class YoloVideo extends StatefulWidget {
+  YoloVideo({Key? key}) : super(key: key);
+
+  @override
+  State<YoloVideo> createState() => _YoloVideoState();
+}
+
+class _YoloVideoState extends State<YoloVideo> {
+  late CameraController controller;
+  late FlutterVision vision;
+  late List<Map<String, dynamic>> yoloResults;
+  CameraImage? cameraImage;
+  bool isLoaded = false;
+  bool isDetecting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    init();
+  }
+
+  init() async {
+    cameras = await availableCameras();
+    vision = FlutterVision();
+    controller = CameraController(cameras[0], ResolutionPreset.low);
+    controller.initialize().then((value) {
+      loadYoloModel().then((value) {
+        setState(() {
+          isLoaded = true;
+          isDetecting = false;
+          yoloResults = [];
+        });
+      });
     });
   }
 
   @override
   void dispose() async {
-    controller.dispose();
-    await vision.closeOcrModel();
-    await vision.closeYoloModel();
     super.dispose();
+    controller.dispose();
+    await vision.closeYoloModel();
   }
 
   @override
@@ -86,205 +205,63 @@ class _MyAppState extends State<MyApp> {
         ),
       );
     }
-    return Scaffold(
-      body: modelResults.isEmpty
-          ? Stack(
-              fit: StackFit.expand,
-              children: [
-                AspectRatio(
-                  aspectRatio: controller.value.aspectRatio,
-                  child: CameraPreview(
-                    controller,
-                  ),
-                ),
-                ColorFiltered(
-                  colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.7), BlendMode.srcOut),
-                  child: Stack(
-                    children: [
-                      Container(
-                        decoration: const BoxDecoration(
-                            color: Colors.black,
-                            backgroundBlendMode: BlendMode.dstOut),
-                      ),
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: Container(
-                          margin: EdgeInsets.only(top: size.height * 0.2),
-                          height: size.height * 0.30,
-                          width: size.width * 0.9,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  bottom: 75,
-                  width: MediaQuery.of(context).size.width,
-                  child: Container(
-                    height: 80,
-                    width: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          width: 5,
-                          color: Colors.white,
-                          style: BorderStyle.solid),
-                    ),
-                    child: isDetecting
-                        ? IconButton(
-                            onPressed: () async {
-                              stopImageStream();
-                            },
-                            icon: const Icon(
-                              Icons.stop,
-                              color: Colors.red,
-                            ),
-                            iconSize: 50,
-                          )
-                        : IconButton(
-                            onPressed: () async {
-                              await startImageStream();
-                            },
-                            icon: const Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                            ),
-                            iconSize: 50,
-                          ),
-                  ),
-                ),
-              ],
-            )
-          : ListView.builder(
-              shrinkWrap: true,
-              itemCount: modelResults.length,
-              itemBuilder: (context, index) {
-                Map<String, dynamic> result = modelResults[index];
-                return Card(
-                  child: Column(
-                    children: [
-                      Text(
-                        result['tag'].toString().toUpperCase(),
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 6),
-                      Image.memory(result['image'] as Uint8List),
-                      const SizedBox(height: 6),
-                      if (widget.model == Models.ocr)
-                        Visibility(
-                          visible: (result['text'] as String) != "None",
-                          child: Column(
-                            children: [
-                              const Text(
-                                "Image as text:",
-                                style: TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                              Text((result['text'] as String))
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AspectRatio(
+          aspectRatio: controller.value.aspectRatio,
+          child: CameraPreview(
+            controller,
+          ),
+        ),
+        ...displayBoxesAroundRecognizedObjects(size),
+        Positioned(
+          bottom: 75,
+          width: MediaQuery.of(context).size.width,
+          child: Container(
+            height: 80,
+            width: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                  width: 5, color: Colors.white, style: BorderStyle.solid),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await stopImageStream();
-        },
-        child: const Icon(Icons.restart_alt_rounded),
-      ),
+            child: isDetecting
+                ? IconButton(
+                    onPressed: () async {
+                      stopDetection();
+                    },
+                    icon: const Icon(
+                      Icons.stop,
+                      color: Colors.red,
+                    ),
+                    iconSize: 50,
+                  )
+                : IconButton(
+                    onPressed: () async {
+                      await startDetection();
+                    },
+                    icon: const Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                    ),
+                    iconSize: 50,
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
-  Future<void> loadOcrModel() async {
-    final responseHandler = await vision.loadOcrModel(
-        labels: 'assets/labels.txt',
-        modelPath: 'assets/best-fp16.tflite',
-        args: {
-          'psm': '11',
-          'oem': '1',
-          'preserve_interword_spaces': '1',
-        },
-        language: 'spa',
-        numThreads: 1,
-        useGpu: false);
-    if (responseHandler.type != 'success') {
-      setState(() {
-        isLoaded = true;
-      });
-    }
-  }
-
   Future<void> loadYoloModel() async {
-    final responseHandler = await vision.loadYoloModel(
+    await vision.loadYoloModel(
         labels: 'assets/labels.txt',
-        modelPath: 'assets/best-fp16.tflite',
+        modelPath: 'assets/yolov5n.tflite',
+        modelVersion: "yolov5",
         numThreads: 1,
         useGpu: false);
-    if (responseHandler.type != 'success') {
-      setState(() {
-        isLoaded = true;
-      });
-    }
-  }
-
-  Future<void> startImageStream() async {
-    if (!controller.value.isInitialized) {
-      print('controller not initialized');
-      return;
-    }
-    await controller.startImageStream((image) async {
-      if (isDetecting) {
-        return;
-      }
-      setState(() {
-        isDetecting = true;
-      });
-      switch (widget.model) {
-        case Models.ocr:
-          await ocrOnFrame(image);
-          break;
-        case Models.yolov5:
-          await yoloOnFrame(image);
-          break;
-        default:
-          break;
-      }
-    });
-  }
-
-  Future<void> stopImageStream() async {
-    if (!controller.value.isInitialized) {
-      print('controller not initialized');
-      return;
-    }
-    if (controller.value.isStreamingImages) {
-      await controller.stopImageStream();
-    }
     setState(() {
-      isDetecting = false;
-      modelResults.clear();
-    });
-  }
-
-  Future<void> ocrOnFrame(CameraImage cameraImage) async {
-    final result = await vision.ocrOnFrame(
-        bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
-        imageHeight: cameraImage.height,
-        imageWidth: cameraImage.width,
-        classIsText: [0],
-        iouThreshold: 0.6,
-        confThreshold: 0.6);
-    setState(() {
-      modelResults = result.data as List<Map<String, dynamic>>;
+      isLoaded = true;
     });
   }
 
@@ -293,10 +270,312 @@ class _MyAppState extends State<MyApp> {
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,
         imageWidth: cameraImage.width,
-        iouThreshold: 0.6,
-        confThreshold: 0.6);
+        iouThreshold: 0.4,
+        confThreshold: 0.4,
+        classThreshold: 0.5);
+    if (result.isNotEmpty) {
+      setState(() {
+        yoloResults = result;
+      });
+    }
+  }
+
+  Future<void> startDetection() async {
+    if (!controller.value.isInitialized) {
+      return;
+    }
     setState(() {
-      modelResults = result.data as List<Map<String, dynamic>>;
+      isDetecting = true;
     });
+    await controller.startImageStream((image) async {
+      cameraImage = image;
+      yoloOnFrame(image);
+    });
+  }
+
+  Future<void> stopDetection() async {
+    setState(() {
+      yoloResults.clear();
+      isDetecting = false;
+      controller.dispose();
+    });
+  }
+
+  List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
+    if (yoloResults.isEmpty) return [];
+
+    double factorX = screen.width / (cameraImage?.height ?? 1);
+    double factorY = screen.height / (cameraImage?.width ?? 1);
+
+    Color colorPick = const Color.fromARGB(255, 50, 233, 30);
+
+    return yoloResults.map((result) {
+      return Positioned(
+        left: result["box"][0] * factorX,
+        top: result["box"][1] * factorY,
+        right: result["box"][2] * factorX,
+        bottom: result["box"][3] * factorY,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(10.0)),
+            border: Border.all(color: Colors.pink, width: 2.0),
+          ),
+          child: Text(
+            "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}%",
+            style: TextStyle(
+              background: Paint()..color = colorPick,
+              color: Colors.white,
+              fontSize: 18.0,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+}
+
+class YoloImage extends StatefulWidget {
+  YoloImage({Key? key}) : super(key: key);
+
+  @override
+  State<YoloImage> createState() => _YoloImageState();
+}
+
+class _YoloImageState extends State<YoloImage> {
+  late FlutterVision vision;
+  late List<Map<String, dynamic>> yoloResults;
+  File? imageFile;
+  int imageHeight = 1;
+  int imageWidth = 1;
+  bool isLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    vision = FlutterVision();
+    loadYoloModel().then((value) {
+      setState(() {
+        isLoaded = true;
+        yoloResults = [];
+      });
+    });
+  }
+
+  @override
+  void dispose() async {
+    super.dispose();
+    await vision.closeYoloModel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
+    if (!isLoaded) {
+      return const Scaffold(
+        body: Center(
+          child: Text("Model not loaded, waiting for it"),
+        ),
+      );
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        imageFile != null ? Image.file(imageFile!) : const SizedBox(),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: pickImage,
+                child: const Text("Pick image"),
+              ),
+              ElevatedButton(
+                onPressed: yoloOnImage,
+                child: const Text("Detect"),
+              )
+            ],
+          ),
+        ),
+        ...displayBoxesAroundRecognizedObjects(size),
+      ],
+    );
+  }
+
+  Future<void> loadYoloModel() async {
+    await vision.loadYoloModel(
+        labels: 'assets/labels.txt',
+        modelPath: 'assets/yolov5n.tflite',
+        modelVersion: "yolov5",
+        numThreads: 2,
+        useGpu: true);
+    setState(() {
+      isLoaded = true;
+    });
+  }
+
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    // Capture a photo
+    final XFile? photo = await picker.pickImage(source: ImageSource.gallery);
+    if (photo != null) {
+      setState(() {
+        imageFile = File(photo.path);
+      });
+    }
+  }
+
+  yoloOnImage() async {
+    yoloResults.clear();
+    Uint8List byte = await imageFile!.readAsBytes();
+    final image = await decodeImageFromList(byte);
+    imageHeight = image.height;
+    imageWidth = image.width;
+    final result = await vision.yoloOnImage(
+        bytesList: byte,
+        imageHeight: image.height,
+        imageWidth: image.width,
+        iouThreshold: 0.8,
+        confThreshold: 0.4,
+        classThreshold: 0.7);
+    if (result.isNotEmpty) {
+      setState(() {
+        yoloResults = result;
+      });
+    }
+  }
+
+  List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
+    if (yoloResults.isEmpty) return [];
+
+    double factorX = screen.width / (imageHeight);
+    double factorY = screen.height / (imageWidth);
+
+    Color colorPick = const Color.fromARGB(255, 50, 233, 30);
+
+    return yoloResults.map((result) {
+      return Positioned(
+        left: result["box"][0] * factorX,
+        top: result["box"][1] * factorY,
+        right: result["box"][2] * factorX,
+        bottom: result["box"][3] * factorY,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(10.0)),
+            border: Border.all(color: Colors.pink, width: 2.0),
+          ),
+          child: Text(
+            "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}%",
+            style: TextStyle(
+              background: Paint()..color = colorPick,
+              color: Colors.white,
+              fontSize: 18.0,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+}
+
+class TesseractImage extends StatefulWidget {
+  const TesseractImage({Key? key}) : super(key: key);
+
+  @override
+  State<TesseractImage> createState() => _TesseractImageState();
+}
+
+class _TesseractImageState extends State<TesseractImage> {
+  late FlutterVision vision;
+  late List<Map<String, dynamic>> tesseractResults = [];
+  File? imageFile;
+  bool isLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    vision = FlutterVision();
+    loadTesseractModel().then((value) {
+      setState(() {
+        isLoaded = true;
+        tesseractResults = [];
+      });
+    });
+  }
+
+  @override
+  void dispose() async {
+    super.dispose();
+    await vision.closeTesseractModel();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isLoaded) {
+      return const Scaffold(
+        body: Center(
+          child: Text("Model not loaded, waiting for it"),
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          imageFile != null ? Image.file(imageFile!) : const SizedBox(),
+          tesseractResults.isEmpty
+              ? const SizedBox()
+              : Align(child: Text(tesseractResults[0]["text"])),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: pickImage,
+                child: const Text("Pick image"),
+              ),
+              ElevatedButton(
+                onPressed: tesseractOnImage,
+                child: const Text("Get Text"),
+              )
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> loadTesseractModel() async {
+    await vision.loadTesseractModel(
+      args: {
+        'psm': '11',
+        'oem': '1',
+        'preserve_interword_spaces': '1',
+      },
+      language: 'spa',
+    );
+    setState(() {
+      isLoaded = true;
+    });
+  }
+
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    // Capture a photo
+    final XFile? photo = await picker.pickImage(source: ImageSource.gallery);
+    if (photo != null) {
+      setState(() {
+        imageFile = File(photo.path);
+      });
+    }
+  }
+
+  tesseractOnImage() async {
+    tesseractResults.clear();
+    Uint8List byte = await imageFile!.readAsBytes();
+    final result = await vision.tesseractOnImage(bytesList: byte);
+    if (result.isNotEmpty) {
+      setState(() {
+        tesseractResults = result;
+      });
+    }
   }
 }

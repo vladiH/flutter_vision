@@ -21,6 +21,8 @@ dependencies:
     sdk: flutter
   flutter_vision:
     path: ../
+  flutter_speed_dial: ^6.2.0
+  image_picker: ^0.8.6+3
 
 dev_dependencies:
   # The "flutter_lints" package below contains a set of recommended lints to
