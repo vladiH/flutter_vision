@@ -1,16 +1,17 @@
-## 0.0.1
-* Initial release.
-## 0.0.2
-* `best` parameter has been removed
-
-## 1.0.0
-* Methods  for Yolov5 now is available `(loadYoloModel, yoloOnFrame, closeYoloModel)`.
-* Yolov5 and OCR model now is independent one to each other.
-
-# 1.1.0
+## 1.1.0
 * loadOcrModel, ocrOnFrame, and closeOcrModel have been removed. Instead, Yolo and Tesseract operate independently of each other.
 * Models no longer returns responseHandler as output. Instead, it returns a List<Map<String, dynamic>>.
 * The Tesseract model has been updated to version 5.0.0, resulting in improved accuracy.
 * New methods have been added: loadYoloModel, yoloOnFrame, yoloOnImage, closeYoloModel, loadTesseractModel, tesseractOnImage, and closeTesseractModel.
 * Support is now available for both Yolov5 and Yolov8.
 * Resource management has been improved, and all models now operate in the background.
+
+## 1.0.0
+* Methods  for Yolov5 now is available `(loadYoloModel, yoloOnFrame, closeYoloModel)`.
+* Yolov5 and OCR model now is independent one to each other.
+
+## 0.0.2
+* `best` parameter has been removed
+
+## 0.0.1
+* Initial release.
