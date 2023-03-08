@@ -341,7 +341,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         mat = utils.filterTextFromImage(mat);
         bitmap = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(mat,bitmap);
-        utils.getScreenshotBmp(bitmap,"TESSEREACT");
+//        utils.getScreenshotBmp(bitmap,"TESSEREACT");
         result.success(tesseract.predict_text(bitmap));
       } catch (Exception e) {
         result.error("100", "Prediction text Error", e);

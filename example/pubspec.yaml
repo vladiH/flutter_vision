@@ -47,7 +47,7 @@ flutter:
   assets:
     - assets/
     - assets/labels.txt
-    - assets/best-fp16.tflite
+    - assets/yolov5n.tflite
     - assets/tessdata/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
