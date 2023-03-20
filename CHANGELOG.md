@@ -1,3 +1,6 @@
+## 1.1.1
+* Bounding box error has been fixed
+* Confidence scores for Yolov8 has been fixed
 ## 1.1.0
 * loadOcrModel, ocrOnFrame, and closeOcrModel have been removed. Instead, Yolo and Tesseract operate independently of each other.
 * Models no longer returns responseHandler as output. Instead, it returns a List<Map<String, dynamic>>.

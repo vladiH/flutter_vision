@@ -250,8 +250,8 @@ public class Yolo {
         try{
             //restore size after scaling, larger images
             if (src_width > input_width || src_height > input_height) {
-                float gainx = input_width/(float) src_width;
-                float gainy = input_height/(float) src_height;
+                float gainx = src_width/(float) input_width;
+                float gainy = src_height/(float) input_height;
                 for(int i=0;i<nms.size();i++){
                     nms.get(i)[0]= min(src_width, Math.max(nms.get(i)[0]*gainx,0));
                     nms.get(i)[1]= min(src_height, Math.max(nms.get(i)[1]*gainy,0));
@@ -280,20 +280,29 @@ public class Yolo {
         final int y = input[0].length;
         final int z = input[0][0].length;
         // Convert input array to OpenCV Mat [x y z] to [x z y]
-        Mat inputMat = new Mat(x*y, z, CvType.CV_32F);
-        for (int i = 0; i < x; i++) {
-            for (int j = 0; j < y; j++) {
-                inputMat.put(y*i+j, 0, input[i][j]);
-            }
-        }
-        // Reshape Mat
-        Mat outputMat = inputMat.reshape(y,x*z);
-
-        // Convert output Mat to float[][][] array
+//        Mat inputMat = new Mat(x*y, z, CvType.CV_32F);
+//        for (int i = 0; i < x; i++) {
+//            for (int j = 0; j < y; j++) {
+//                inputMat.put(y*i+j, 0, input[i][j]);
+//            }
+//        }
+//        // Reshape Mat
+//        Mat outputMat = inputMat.reshape(y,x*z);
+//
+//        // Convert output Mat to float[][][] array
+//        float[][][] output = new float[x][z][y];
+//        for (int i = 0; i < x; i++) {
+//            for (int j = 0; j < z; j++) {
+//                outputMat.row(z*i+j).get(0, 0, output[i][j]);
+//            }
+//        }
+//        // Convert output Mat to float[][][] array
         float[][][] output = new float[x][z][y];
         for (int i = 0; i < x; i++) {
-            for (int j = 0; j < z; j++) {
-                outputMat.row(z*i+j).get(0, 0, output[i][j]);
+            for (int j = 0; j < y; j++) {
+                for (int k = 0; k < z; k++) {
+                    output[i][k][j] = input[i][j][k];
+                }
             }
         }
         return output;

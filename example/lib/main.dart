@@ -93,18 +93,18 @@ class _MyAppState extends State<MyApp> {
               });
             },
           ),
-          SpeedDialChild(
-            child: const Icon(Icons.document_scanner),
-            foregroundColor: Colors.white,
-            backgroundColor: Colors.green,
-            label: 'Vision',
-            labelStyle: const TextStyle(fontSize: 18.0),
-            onTap: () {
-              setState(() {
-                option = Options.vision;
-              });
-            },
-          ),
+          // SpeedDialChild(
+          //   child: const Icon(Icons.document_scanner),
+          //   foregroundColor: Colors.white,
+          //   backgroundColor: Colors.green,
+          //   label: 'Vision',
+          //   labelStyle: const TextStyle(fontSize: 18.0),
+          //   onTap: () {
+          //     setState(() {
+          //       option = Options.vision;
+          //     });
+          //   },
+          // ),
         ],
       ),
     );
@@ -122,34 +122,6 @@ class _MyAppState extends State<MyApp> {
     }
     return const Center(child: Text("Choose Task"));
   }
-  // Future<void> loadOcrModel() async {
-  //   await vision.loadOcrModel(
-  //       labels: 'assets/labels.txt',
-  //       modelPath: 'assets/best-fp16.tflite',
-  //       args: {
-  //         'psm': '11',
-  //         'oem': '1',
-  //         'preserve_interword_spaces': '1',
-  //       },
-  //       language: 'spa',
-  //       numThreads: 1,
-  //       useGpu: false);
-  //   setState(() {
-  //     isLoaded = true;
-  //   });
-  // }
-  // ocrOnFrame(CameraImage cameraImage) async {
-  //   final result = await vision.ocrOnFrame(
-  //       bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
-  //       imageHeight: cameraImage.height,
-  //       imageWidth: cameraImage.width,
-  //       classIsText: [0],
-  //       iouThreshold: 0.6,
-  //       confThreshold: 0.8);
-  //   setState(() {
-  //     yoloResults = result;
-  //   });
-  // }
 }
 
 class YoloVideo extends StatefulWidget {
@@ -256,10 +228,10 @@ class _YoloVideoState extends State<YoloVideo> {
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
         labels: 'assets/labels.txt',
-        modelPath: 'assets/yolov5n.tflite',
-        modelVersion: "yolov5",
-        numThreads: 1,
-        useGpu: false);
+        modelPath: 'assets/yolov8n.tflite',
+        modelVersion: "yolov8",
+        numThreads: 2,
+        useGpu: true);
     setState(() {
       isLoaded = true;
     });
@@ -281,29 +253,29 @@ class _YoloVideoState extends State<YoloVideo> {
   }
 
   Future<void> startDetection() async {
-    if (!controller.value.isInitialized) {
-      return;
-    }
     setState(() {
       isDetecting = true;
     });
+    if (controller.value.isStreamingImages) {
+      return;
+    }
     await controller.startImageStream((image) async {
-      cameraImage = image;
-      yoloOnFrame(image);
+      if (isDetecting) {
+        cameraImage = image;
+        yoloOnFrame(image);
+      }
     });
   }
 
   Future<void> stopDetection() async {
     setState(() {
-      yoloResults.clear();
       isDetecting = false;
-      controller.dispose();
+      yoloResults.clear();
     });
   }
 
   List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
     if (yoloResults.isEmpty) return [];
-
     double factorX = screen.width / (cameraImage?.height ?? 1);
     double factorY = screen.height / (cameraImage?.width ?? 1);
 
@@ -313,8 +285,8 @@ class _YoloVideoState extends State<YoloVideo> {
       return Positioned(
         left: result["box"][0] * factorX,
         top: result["box"][1] * factorY,
-        right: result["box"][2] * factorX,
-        bottom: result["box"][3] * factorY,
+        width: (result["box"][2] - result["box"][0]) * factorX,
+        height: (result["box"][3] - result["box"][1]) * factorY,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(10.0)),
@@ -355,8 +327,8 @@ class _YoloImageState extends State<YoloImage> {
     vision = FlutterVision();
     loadYoloModel().then((value) {
       setState(() {
-        isLoaded = true;
         yoloResults = [];
+        isLoaded = true;
       });
     });
   }
@@ -405,8 +377,8 @@ class _YoloImageState extends State<YoloImage> {
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
         labels: 'assets/labels.txt',
-        modelPath: 'assets/yolov5n.tflite',
-        modelVersion: "yolov5",
+        modelPath: 'assets/yolov8n.tflite',
+        modelVersion: "yolov8",
         numThreads: 2,
         useGpu: true);
     setState(() {
@@ -437,7 +409,7 @@ class _YoloImageState extends State<YoloImage> {
         imageWidth: image.width,
         iouThreshold: 0.8,
         confThreshold: 0.4,
-        classThreshold: 0.7);
+        classThreshold: 0.5);
     if (result.isNotEmpty) {
       setState(() {
         yoloResults = result;
@@ -448,17 +420,21 @@ class _YoloImageState extends State<YoloImage> {
   List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
     if (yoloResults.isEmpty) return [];
 
-    double factorX = screen.width / (imageHeight);
-    double factorY = screen.height / (imageWidth);
+    double factorX = screen.width / (imageWidth);
+    double imgRatio = imageWidth / imageHeight;
+    double newWidth = imageWidth * factorX;
+    double newHeight = newWidth / imgRatio;
+    double factorY = newHeight / (imageHeight);
+
+    double pady = (screen.height - newHeight) / 2;
 
     Color colorPick = const Color.fromARGB(255, 50, 233, 30);
-
     return yoloResults.map((result) {
       return Positioned(
         left: result["box"][0] * factorX,
-        top: result["box"][1] * factorY,
-        right: result["box"][2] * factorX,
-        bottom: result["box"][3] * factorY,
+        top: result["box"][1] * factorY + pady,
+        width: (result["box"][2] - result["box"][0]) * factorX,
+        height: (result["box"][3] - result["box"][1]) * factorY,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(10.0)),

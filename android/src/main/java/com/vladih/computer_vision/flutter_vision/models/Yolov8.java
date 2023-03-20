@@ -55,10 +55,10 @@ public class Yolov8 extends Yolo{
             float x1,y1,x2,y2;
             for(int i=0; i<rows;i++){
                 //convert xywh to xyxy
-                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f)*input_width;
-                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*input_height;
-                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*input_width;
-                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*input_height;
+                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f);
+                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f);
+                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f);
+                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f);
                 float max = 0;
                 int y = 0;
                 for(int j=class_index;j<dimension;j++){
