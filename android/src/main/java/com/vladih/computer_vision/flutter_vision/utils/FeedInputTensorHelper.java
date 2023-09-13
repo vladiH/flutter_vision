@@ -17,7 +17,11 @@ public class FeedInputTensorHelper {
     private ImageProcessor downSizeImageProcessor;
     private ImageProcessor upSizeImageProcessor;
 
+    private int previus_width = 0;
+    private  int previus_height = 0;
     private FeedInputTensorHelper(int width, int height, float mean, float std) {
+        previus_width = width;
+        previus_height = height;
         tensorImage = new TensorImage(DataType.FLOAT32);
         downSizeImageProcessor =
                 new ImageProcessor.Builder()
@@ -39,6 +43,10 @@ public class FeedInputTensorHelper {
     public static synchronized FeedInputTensorHelper getInstance(int width, int height, float mean, float std) {
         if (instance == null) {
             instance = new FeedInputTensorHelper(width, height,mean, std);
+        }else{
+            if (instance.previus_width!=width || instance.previus_height!=height){
+                instance = new FeedInputTensorHelper(width, height,mean, std);
+            }
         }
         return instance;
     }

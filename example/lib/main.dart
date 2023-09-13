@@ -9,7 +9,7 @@ import 'dart:async';
 import 'package:flutter_vision/flutter_vision.dart';
 import 'package:image_picker/image_picker.dart';
 
-enum Options { none, image, frame, tesseract, vision }
+enum Options { none, imagev5, imagev8, frame, tesseract, vision }
 
 late List<CameraDescription> cameras;
 main() async {
@@ -30,10 +30,19 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  late FlutterVision vision;
   Options option = Options.none;
   @override
   void initState() {
     super.initState();
+    vision = FlutterVision();
+  }
+
+  @override
+  void dispose() async {
+    super.dispose();
+    await vision.closeTesseractModel();
+    await vision.closeYoloModel();
   }
 
   @override
@@ -73,11 +82,23 @@ class _MyAppState extends State<MyApp> {
             child: const Icon(Icons.camera),
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
-            label: 'Yolo on Image',
+            label: 'YoloV8 on Image',
             labelStyle: const TextStyle(fontSize: 18.0),
             onTap: () {
               setState(() {
-                option = Options.image;
+                option = Options.imagev8;
+              });
+            },
+          ),
+          SpeedDialChild(
+            child: const Icon(Icons.camera),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            label: 'YoloV5 on Image',
+            labelStyle: const TextStyle(fontSize: 18.0),
+            onTap: () {
+              setState(() {
+                option = Options.imagev5;
               });
             },
           ),
@@ -112,20 +133,24 @@ class _MyAppState extends State<MyApp> {
 
   Widget task(Options option) {
     if (option == Options.frame) {
-      return YoloVideo();
+      return YoloVideo(vision: vision);
     }
-    if (option == Options.image) {
-      return YoloImage();
+    if (option == Options.imagev5) {
+      return YoloImageV5(vision: vision);
+    }
+    if (option == Options.imagev8) {
+      return YoloImageV8(vision: vision);
     }
     if (option == Options.tesseract) {
-      return const TesseractImage();
+      return TesseractImage(vision: vision);
     }
     return const Center(child: Text("Choose Task"));
   }
 }
 
 class YoloVideo extends StatefulWidget {
-  YoloVideo({Key? key}) : super(key: key);
+  final FlutterVision vision;
+  const YoloVideo({Key? key, required this.vision}) : super(key: key);
 
   @override
   State<YoloVideo> createState() => _YoloVideoState();
@@ -133,7 +158,6 @@ class YoloVideo extends StatefulWidget {
 
 class _YoloVideoState extends State<YoloVideo> {
   late CameraController controller;
-  late FlutterVision vision;
   late List<Map<String, dynamic>> yoloResults;
   CameraImage? cameraImage;
   bool isLoaded = false;
@@ -147,7 +171,6 @@ class _YoloVideoState extends State<YoloVideo> {
 
   init() async {
     cameras = await availableCameras();
-    vision = FlutterVision();
     controller = CameraController(cameras[0], ResolutionPreset.low);
     controller.initialize().then((value) {
       loadYoloModel().then((value) {
@@ -164,7 +187,6 @@ class _YoloVideoState extends State<YoloVideo> {
   void dispose() async {
     super.dispose();
     controller.dispose();
-    await vision.closeYoloModel();
   }
 
   @override
@@ -226,7 +248,7 @@ class _YoloVideoState extends State<YoloVideo> {
   }
 
   Future<void> loadYoloModel() async {
-    await vision.loadYoloModel(
+    await widget.vision.loadYoloModel(
         labels: 'assets/labels.txt',
         modelPath: 'assets/yolov8n.tflite',
         modelVersion: "yolov8",
@@ -238,7 +260,7 @@ class _YoloVideoState extends State<YoloVideo> {
   }
 
   Future<void> yoloOnFrame(CameraImage cameraImage) async {
-    final result = await vision.yoloOnFrame(
+    final result = await widget.vision.yoloOnFrame(
         bytesList: cameraImage.planes.map((plane) => plane.bytes).toList(),
         imageHeight: cameraImage.height,
         imageWidth: cameraImage.width,
@@ -306,15 +328,15 @@ class _YoloVideoState extends State<YoloVideo> {
   }
 }
 
-class YoloImage extends StatefulWidget {
-  YoloImage({Key? key}) : super(key: key);
+class YoloImageV5 extends StatefulWidget {
+  final FlutterVision vision;
+  const YoloImageV5({Key? key, required this.vision}) : super(key: key);
 
   @override
-  State<YoloImage> createState() => _YoloImageState();
+  State<YoloImageV5> createState() => _YoloImageV5State();
 }
 
-class _YoloImageState extends State<YoloImage> {
-  late FlutterVision vision;
+class _YoloImageV5State extends State<YoloImageV5> {
   late List<Map<String, dynamic>> yoloResults;
   File? imageFile;
   int imageHeight = 1;
@@ -324,7 +346,6 @@ class _YoloImageState extends State<YoloImage> {
   @override
   void initState() {
     super.initState();
-    vision = FlutterVision();
     loadYoloModel().then((value) {
       setState(() {
         yoloResults = [];
@@ -336,7 +357,6 @@ class _YoloImageState extends State<YoloImage> {
   @override
   void dispose() async {
     super.dispose();
-    await vision.closeYoloModel();
   }
 
   @override
@@ -375,7 +395,153 @@ class _YoloImageState extends State<YoloImage> {
   }
 
   Future<void> loadYoloModel() async {
-    await vision.loadYoloModel(
+    await widget.vision.loadYoloModel(
+        labels: 'assets/labels.txt',
+        modelPath: 'assets/yolov5n.tflite',
+        modelVersion: "yolov5",
+        numThreads: 2,
+        useGpu: true);
+    setState(() {
+      isLoaded = true;
+    });
+  }
+
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    // Capture a photo
+    final XFile? photo = await picker.pickImage(source: ImageSource.gallery);
+    if (photo != null) {
+      setState(() {
+        imageFile = File(photo.path);
+      });
+    }
+  }
+
+  yoloOnImage() async {
+    yoloResults.clear();
+    Uint8List byte = await imageFile!.readAsBytes();
+    final image = await decodeImageFromList(byte);
+    imageHeight = image.height;
+    imageWidth = image.width;
+    final result = await widget.vision.yoloOnImage(
+        bytesList: byte,
+        imageHeight: image.height,
+        imageWidth: image.width,
+        iouThreshold: 0.8,
+        confThreshold: 0.4,
+        classThreshold: 0.5);
+    if (result.isNotEmpty) {
+      setState(() {
+        yoloResults = result;
+      });
+    }
+  }
+
+  List<Widget> displayBoxesAroundRecognizedObjects(Size screen) {
+    if (yoloResults.isEmpty) return [];
+
+    double factorX = screen.width / (imageWidth);
+    double imgRatio = imageWidth / imageHeight;
+    double newWidth = imageWidth * factorX;
+    double newHeight = newWidth / imgRatio;
+    double factorY = newHeight / (imageHeight);
+
+    double pady = (screen.height - newHeight) / 2;
+
+    Color colorPick = const Color.fromARGB(255, 50, 233, 30);
+    return yoloResults.map((result) {
+      return Positioned(
+        left: result["box"][0] * factorX,
+        top: result["box"][1] * factorY + pady,
+        width: (result["box"][2] - result["box"][0]) * factorX,
+        height: (result["box"][3] - result["box"][1]) * factorY,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(10.0)),
+            border: Border.all(color: Colors.pink, width: 2.0),
+          ),
+          child: Text(
+            "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}%",
+            style: TextStyle(
+              background: Paint()..color = colorPick,
+              color: Colors.white,
+              fontSize: 18.0,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+}
+
+class YoloImageV8 extends StatefulWidget {
+  final FlutterVision vision;
+  const YoloImageV8({Key? key, required this.vision}) : super(key: key);
+
+  @override
+  State<YoloImageV8> createState() => _YoloImageV8State();
+}
+
+class _YoloImageV8State extends State<YoloImageV8> {
+  late List<Map<String, dynamic>> yoloResults;
+  File? imageFile;
+  int imageHeight = 1;
+  int imageWidth = 1;
+  bool isLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadYoloModel().then((value) {
+      setState(() {
+        yoloResults = [];
+        isLoaded = true;
+      });
+    });
+  }
+
+  @override
+  void dispose() async {
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size;
+    if (!isLoaded) {
+      return const Scaffold(
+        body: Center(
+          child: Text("Model not loaded, waiting for it"),
+        ),
+      );
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        imageFile != null ? Image.file(imageFile!) : const SizedBox(),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: pickImage,
+                child: const Text("Pick image"),
+              ),
+              ElevatedButton(
+                onPressed: yoloOnImage,
+                child: const Text("Detect"),
+              )
+            ],
+          ),
+        ),
+        ...displayBoxesAroundRecognizedObjects(size),
+      ],
+    );
+  }
+
+  Future<void> loadYoloModel() async {
+    await widget.vision.loadYoloModel(
         labels: 'assets/labels.txt',
         modelPath: 'assets/yolov8n.tflite',
         modelVersion: "yolov8",
@@ -403,7 +569,7 @@ class _YoloImageState extends State<YoloImage> {
     final image = await decodeImageFromList(byte);
     imageHeight = image.height;
     imageWidth = image.width;
-    final result = await vision.yoloOnImage(
+    final result = await widget.vision.yoloOnImage(
         bytesList: byte,
         imageHeight: image.height,
         imageWidth: image.width,
@@ -455,14 +621,14 @@ class _YoloImageState extends State<YoloImage> {
 }
 
 class TesseractImage extends StatefulWidget {
-  const TesseractImage({Key? key}) : super(key: key);
+  final FlutterVision vision;
+  const TesseractImage({Key? key, required this.vision}) : super(key: key);
 
   @override
   State<TesseractImage> createState() => _TesseractImageState();
 }
 
 class _TesseractImageState extends State<TesseractImage> {
-  late FlutterVision vision;
   late List<Map<String, dynamic>> tesseractResults = [];
   File? imageFile;
   bool isLoaded = false;
@@ -470,7 +636,6 @@ class _TesseractImageState extends State<TesseractImage> {
   @override
   void initState() {
     super.initState();
-    vision = FlutterVision();
     loadTesseractModel().then((value) {
       setState(() {
         isLoaded = true;
@@ -482,7 +647,6 @@ class _TesseractImageState extends State<TesseractImage> {
   @override
   void dispose() async {
     super.dispose();
-    await vision.closeTesseractModel();
   }
 
   @override
@@ -494,33 +658,35 @@ class _TesseractImageState extends State<TesseractImage> {
         ),
       );
     }
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          imageFile != null ? Image.file(imageFile!) : const SizedBox(),
-          tesseractResults.isEmpty
-              ? const SizedBox()
-              : Align(child: Text(tesseractResults[0]["text"])),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextButton(
-                onPressed: pickImage,
-                child: const Text("Pick image"),
-              ),
-              ElevatedButton(
-                onPressed: tesseractOnImage,
-                child: const Text("Get Text"),
-              )
-            ],
-          ),
-        ],
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            imageFile != null ? Image.file(imageFile!) : const SizedBox(),
+            tesseractResults.isEmpty
+                ? const SizedBox()
+                : Align(child: Text(tesseractResults[0]["text"])),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: pickImage,
+                  child: const Text("Pick image"),
+                ),
+                ElevatedButton(
+                  onPressed: tesseractOnImage,
+                  child: const Text("Get Text"),
+                )
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Future<void> loadTesseractModel() async {
-    await vision.loadTesseractModel(
+    await widget.vision.loadTesseractModel(
       args: {
         'psm': '11',
         'oem': '1',
@@ -547,7 +713,7 @@ class _TesseractImageState extends State<TesseractImage> {
   tesseractOnImage() async {
     tesseractResults.clear();
     Uint8List byte = await imageFile!.readAsBytes();
-    final result = await vision.tesseractOnImage(bytesList: byte);
+    final result = await widget.vision.tesseractOnImage(bytesList: byte);
     if (result.isNotEmpty) {
       setState(() {
         tesseractResults = result;

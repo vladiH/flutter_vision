@@ -100,7 +100,7 @@ abstract class FlutterVision {
   ///where map is mapped as follow:
   ///
   ///```Map<String, dynamic>:{
-  ///    "box": [x1:top, y1:left, x2:bottom, y2:right, class_confidence]
+  ///    "box": [x1:left, y1:top, x2:right, y2:bottom, class_confidence]
   ///    "tag": String: detected class
   /// }```
   ///
@@ -125,7 +125,7 @@ abstract class FlutterVision {
   ///where map is mapped as follows:
   ///
   ///```Map<String, dynamic>:{
-  ///    "box": [x1:top, y1:left, x2:bottom, y2:right, class_confidence]
+  ///    "box": [x1:left, y1:top, x2:right, y2:bottom, class_confidence]
   ///    "tag": String: detected class
   /// }```
   ///

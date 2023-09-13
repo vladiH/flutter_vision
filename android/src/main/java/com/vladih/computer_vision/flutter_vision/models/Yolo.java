@@ -37,7 +37,7 @@ import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 
 public class Yolo {
-    protected float [][][] output;
+    protected float[][][] output;
     protected Interpreter interpreter;
     protected Vector<String> labels;
     protected final Context context;
@@ -47,13 +47,14 @@ public class Yolo {
     protected final boolean use_gpu;
     protected final String label_path;
     protected final int rotation;
+
     public Yolo(Context context,
-                  String model_path,
-                  boolean is_assets,
-                  int num_threads,
-                  boolean use_gpu,
-                  String label_path,
-                  int rotation) {
+                String model_path,
+                boolean is_assets,
+                int num_threads,
+                boolean use_gpu,
+                String label_path,
+                int rotation) {
         this.context = context;
         this.model_path = model_path;
         this.is_assets = is_assets;
@@ -63,10 +64,11 @@ public class Yolo {
         this.rotation = rotation;
     }
 
-//    public Vector<String> getLabels(){return this.labels;}
-    public Tensor getInputTensor(){
+    //    public Vector<String> getLabels(){return this.labels;}
+    public Tensor getInputTensor() {
         return this.interpreter.getInputTensor(0);
     }
+
     @SuppressLint("SuspiciousIndentation")
     public void initialize_model() throws Exception {
         AssetManager asset_manager = null;
@@ -75,48 +77,46 @@ public class Yolo {
         FileInputStream input_stream = null;
 
         try {
-            if (this.interpreter == null) {
-                if (is_assets) {
-                    asset_manager = context.getAssets();
-                    AssetFileDescriptor file_descriptor = asset_manager.openFd(this.model_path);
-                    input_stream = new FileInputStream(file_descriptor.getFileDescriptor());
+            if (is_assets) {
+                asset_manager = context.getAssets();
+                AssetFileDescriptor file_descriptor = asset_manager.openFd(this.model_path);
+                input_stream = new FileInputStream(file_descriptor.getFileDescriptor());
 
-                    file_channel = input_stream.getChannel();
-                    buffer = file_channel.map(
-                            FileChannel.MapMode.READ_ONLY, file_descriptor.getStartOffset(),
-                            file_descriptor.getLength()
-                    );
-                    file_descriptor.close();
-                } else {
-                    input_stream = new FileInputStream(new File(this.model_path));
-                    file_channel = input_stream.getChannel();
-                    buffer = file_channel.map(FileChannel.MapMode.READ_ONLY, 0, file_channel.size());
-                }
-
-                Interpreter.Options interpreterOptions = new Interpreter.Options();
-                try{
-                    // Check if GPU support is available
-                    CompatibilityList compatibilityList = new CompatibilityList();
-                    if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
-                        GpuDelegateFactory.Options delegateOptions = compatibilityList.getBestOptionsForThisDevice();
-                        GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(false));
-                        interpreterOptions.addDelegate(gpuDelegate);
-                    }else{
-                        interpreterOptions.setNumThreads(num_threads);
-                    }
-                }catch (Exception e){
-                    interpreterOptions = new Interpreter.Options();
-                    interpreterOptions.setNumThreads(num_threads);
-
-                } finally {
-                    // Create the interpreter
-                    this.interpreter = new Interpreter(buffer, interpreterOptions);
-                }
-                this.interpreter.allocateTensors();
-                this.labels = load_labels(asset_manager, label_path);
-                int[] shape = interpreter.getOutputTensor(0).shape();
-                this.output = new float[shape[0]][shape[1]][shape[2]];
+                file_channel = input_stream.getChannel();
+                buffer = file_channel.map(
+                        FileChannel.MapMode.READ_ONLY, file_descriptor.getStartOffset(),
+                        file_descriptor.getLength()
+                );
+                file_descriptor.close();
+            } else {
+                input_stream = new FileInputStream(new File(this.model_path));
+                file_channel = input_stream.getChannel();
+                buffer = file_channel.map(FileChannel.MapMode.READ_ONLY, 0, file_channel.size());
             }
+
+            Interpreter.Options interpreterOptions = new Interpreter.Options();
+            try {
+                // Check if GPU support is available
+                CompatibilityList compatibilityList = new CompatibilityList();
+                if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
+                    GpuDelegateFactory.Options delegateOptions = compatibilityList.getBestOptionsForThisDevice();
+                    GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(false));
+                    interpreterOptions.addDelegate(gpuDelegate);
+                } else {
+                    interpreterOptions.setNumThreads(num_threads);
+                }
+                // Create the interpreter
+                this.interpreter = new Interpreter(buffer, interpreterOptions);
+            } catch (Exception e) {
+                interpreterOptions = new Interpreter.Options();
+                interpreterOptions.setNumThreads(num_threads);
+                // Create the interpreter
+                this.interpreter = new Interpreter(buffer, interpreterOptions);
+            }
+            this.interpreter.allocateTensors();
+            this.labels = load_labels(asset_manager, label_path);
+            int[] shape = interpreter.getOutputTensor(0).shape();
+            this.output = new float[shape[0]][shape[1]][shape[2]];
         } catch (Exception e) {
             throw e;
         } finally {
@@ -130,22 +130,22 @@ public class Yolo {
     }
 
     protected Vector<String> load_labels(AssetManager asset_manager, String label_path) throws Exception {
-        BufferedReader br=null;
+        BufferedReader br = null;
         try {
-            if(asset_manager!=null){
+            if (asset_manager != null) {
                 br = new BufferedReader(new InputStreamReader(asset_manager.open(label_path)));
-            }else{
+            } else {
                 br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(label_path))));
             }
             String line;
             Vector<String> labels = new Vector<>();
-            while ((line=br.readLine())!=null){
+            while ((line = br.readLine()) != null) {
                 labels.add(line);
             }
             return labels;
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new Exception(e.getMessage());
-        }finally {
+        } finally {
             if (br != null) {
                 br.close();
             }
@@ -153,131 +153,131 @@ public class Yolo {
     }
 
     public List<Map<String, Object>> detect_task(ByteBuffer byteBuffer,
-                                                   int source_height,
-                                                   int source_width,
-                                                   float iou_threshold,
-                                                   float conf_threshold, float class_threshold) throws Exception {
-        try{
+                                                 int source_height,
+                                                 int source_width,
+                                                 float iou_threshold,
+                                                 float conf_threshold, float class_threshold) throws Exception {
+        try {
             int[] shape = this.interpreter.getInputTensor(0).shape();
             this.interpreter.run(byteBuffer, this.output);
-            List<float []> boxes = filter_box(this.output,iou_threshold,conf_threshold, class_threshold,shape[1],shape[2]);
-            boxes = restore_size(boxes, shape[1],shape[2], source_width,source_height);
+            List<float[]> boxes = filter_box(this.output, iou_threshold, conf_threshold, class_threshold, shape[1], shape[2]);
+            boxes = restore_size(boxes, shape[1], shape[2], source_width, source_height);
             return out(boxes, this.labels);
-        }catch (Exception e){
+        } catch (Exception e) {
             throw e;
-        }finally {
+        } finally {
             byteBuffer.clear();
         }
     }
 
-    protected List<float[]>filter_box(float [][][] model_outputs, float iou_threshold,
-                                           float conf_threshold, float class_threshold, float input_width, float input_height){
+    protected List<float[]> filter_box(float[][][] model_outputs, float iou_threshold,
+                                       float conf_threshold, float class_threshold, float input_width, float input_height) {
         try {
             List<float[]> pre_box = new ArrayList<>();
             int conf_index = 4;
             int class_index = 5;
             int dimension = model_outputs[0][0].length;
             int rows = model_outputs[0].length;
-            float x1,y1,x2,y2,conf;
-            for(int i=0; i<rows;i++){
+            float x1, y1, x2, y2, conf;
+            for (int i = 0; i < rows; i++) {
                 //convert xywh to xyxy
-                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f)*input_width;
-                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f)*input_height;
-                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f)*input_width;
-                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f)*input_height;
+                x1 = (model_outputs[0][i][0] - model_outputs[0][i][2] / 2f) * input_width;
+                y1 = (model_outputs[0][i][1] - model_outputs[0][i][3] / 2f) * input_height;
+                x2 = (model_outputs[0][i][0] + model_outputs[0][i][2] / 2f) * input_width;
+                y2 = (model_outputs[0][i][1] + model_outputs[0][i][3] / 2f) * input_height;
                 conf = model_outputs[0][i][conf_index];
-                if(conf<conf_threshold) continue;
+                if (conf < conf_threshold) continue;
                 float max = 0;
                 int y = 0;
-                for(int j=class_index;j<dimension;j++){
-                    if (model_outputs[0][i][j]<class_threshold) continue;
-                    if (max<model_outputs[0][i][j]){
+                for (int j = class_index; j < dimension; j++) {
+                    if (model_outputs[0][i][j] < class_threshold) continue;
+                    if (max < model_outputs[0][i][j]) {
                         max = model_outputs[0][i][j];
                         y = j;
                     }
                 }
-                if (max>0){
+                if (max > 0) {
                     float[] tmp = new float[6];
-                    tmp[0]=x1;
-                    tmp[1]=y1;
-                    tmp[2]=x2;
-                    tmp[3]=y2;
-                    tmp[4]=model_outputs[0][i][y];
-                    tmp[5]=(y-class_index)*1f;
+                    tmp[0] = x1;
+                    tmp[1] = y1;
+                    tmp[2] = x2;
+                    tmp[3] = y2;
+                    tmp[4] = model_outputs[0][i][y];
+                    tmp[5] = (y - class_index) * 1f;
                     pre_box.add(tmp);
                 }
             }
             if (pre_box.isEmpty()) return new ArrayList<>();
             //for reverse orden, insteand of using .reversed method
-            Comparator<float []> compareValues = (v1, v2)->Float.compare(v1[1],v2[1]);
+            Comparator<float[]> compareValues = (v1, v2) -> Float.compare(v1[1], v2[1]);
             //Collections.sort(pre_box,compareValues.reversed());
-            Collections.sort(pre_box,compareValues);
+            Collections.sort(pre_box, compareValues);
             return nms(pre_box, iou_threshold);
-        }catch (Exception e){
-            throw  e;
+        } catch (Exception e) {
+            throw e;
         }
     }
 
-    protected static List<float[]>nms(List<float[]> boxes, float iou_threshold){
+    protected static List<float[]> nms(List<float[]> boxes, float iou_threshold) {
         try {
-            for(int i =0; i<boxes.size();i++){
-                float [] box = boxes.get(i);
-                for(int j =i+1; j<boxes.size();j++){
-                    float [] next_box = boxes.get(j);
-                    float x1 = Math.max(next_box[0],box[0]);
-                    float y1 = Math.max(next_box[1],box[1]);
-                    float x2 = Math.min(next_box[2],box[2]);
-                    float y2 = Math.min(next_box[3],box[3]);
+            for (int i = 0; i < boxes.size(); i++) {
+                float[] box = boxes.get(i);
+                for (int j = i + 1; j < boxes.size(); j++) {
+                    float[] next_box = boxes.get(j);
+                    float x1 = Math.max(next_box[0], box[0]);
+                    float y1 = Math.max(next_box[1], box[1]);
+                    float x2 = Math.min(next_box[2], box[2]);
+                    float y2 = Math.min(next_box[3], box[3]);
 
-                    float width = Math.max(0,x2-x1);
-                    float height = Math.max(0,y2-y1);
+                    float width = Math.max(0, x2 - x1);
+                    float height = Math.max(0, y2 - y1);
 
-                    float intersection = width*height;
-                    float union = (next_box[2]-next_box[0])*(next_box[3]-next_box[1])
-                            + (box[2]-box[0])*(box[3]-box[1])-intersection;
-                    float iou = intersection/union;
-                    if (iou>iou_threshold){
+                    float intersection = width * height;
+                    float union = (next_box[2] - next_box[0]) * (next_box[3] - next_box[1])
+                            + (box[2] - box[0]) * (box[3] - box[1]) - intersection;
+                    float iou = intersection / union;
+                    if (iou > iou_threshold) {
                         boxes.remove(j);
                         j--;
                     }
                 }
             }
             return boxes;
-        }catch (Exception e){
+        } catch (Exception e) {
             Log.e("nms", e.getMessage());
-            throw  e;
+            throw e;
         }
     }
 
-    protected List<float[]>  restore_size(List<float[]> nms,
-                                        int input_width,
-                                        int input_height,
-                                        int src_width,
-                                        int src_height){
-        try{
+    protected List<float[]> restore_size(List<float[]> nms,
+                                         int input_width,
+                                         int input_height,
+                                         int src_width,
+                                         int src_height) {
+        try {
             //restore size after scaling, larger images
             if (src_width > input_width || src_height > input_height) {
-                float gainx = src_width/(float) input_width;
-                float gainy = src_height/(float) input_height;
-                for(int i=0;i<nms.size();i++){
-                    nms.get(i)[0]= min(src_width, Math.max(nms.get(i)[0]*gainx,0));
-                    nms.get(i)[1]= min(src_height, Math.max(nms.get(i)[1]*gainy,0));
-                    nms.get(i)[2]= min(src_width, Math.max(nms.get(i)[2]*gainx,0));
-                    nms.get(i)[3]= min(src_height, Math.max(nms.get(i)[3]*gainy,0));
+                float gainx = src_width / (float) input_width;
+                float gainy = src_height / (float) input_height;
+                for (int i = 0; i < nms.size(); i++) {
+                    nms.get(i)[0] = min(src_width, Math.max(nms.get(i)[0] * gainx, 0));
+                    nms.get(i)[1] = min(src_height, Math.max(nms.get(i)[1] * gainy, 0));
+                    nms.get(i)[2] = min(src_width, Math.max(nms.get(i)[2] * gainx, 0));
+                    nms.get(i)[3] = min(src_height, Math.max(nms.get(i)[3] * gainy, 0));
                 }
                 //restore size after padding, smaller images
-            }else{
-                float padx = (src_width-input_width)/2f;
-                float pady = (src_height-input_height)/2f;
-                for(int i=0;i<nms.size();i++){
-                    nms.get(i)[0]= min(src_width, Math.max(nms.get(i)[0]+padx,0));
-                    nms.get(i)[1]= min(src_height, Math.max(nms.get(i)[1]+pady,0));
-                    nms.get(i)[2]= min(src_width, Math.max(nms.get(i)[2]+padx,0));
-                    nms.get(i)[3]= min(src_height, Math.max(nms.get(i)[3]+ pady,0));
+            } else {
+                float padx = (src_width - input_width) / 2f;
+                float pady = (src_height - input_height) / 2f;
+                for (int i = 0; i < nms.size(); i++) {
+                    nms.get(i)[0] = min(src_width, Math.max(nms.get(i)[0] + padx, 0));
+                    nms.get(i)[1] = min(src_height, Math.max(nms.get(i)[1] + pady, 0));
+                    nms.get(i)[2] = min(src_width, Math.max(nms.get(i)[2] + padx, 0));
+                    nms.get(i)[3] = min(src_height, Math.max(nms.get(i)[3] + pady, 0));
                 }
             }
-            return  nms;
-        }catch (Exception e){
+            return nms;
+        } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
     }
@@ -315,28 +315,28 @@ public class Yolo {
         return output;
     }
 
-    protected List<Map<String, Object>>  out(List<float[]> yolo_result, Vector<String> labels){
+    protected List<Map<String, Object>> out(List<float[]> yolo_result, Vector<String> labels) {
         try {
             List<Map<String, Object>> result = new ArrayList<>();
             //utils.getScreenshotBmp(bitmap, "current");
-            for (float [] box: yolo_result) {
+            for (float[] box : yolo_result) {
                 Map<String, Object> output = new HashMap<>();
-                output.put("box",new float[]{box[0], box[1], box[2], box[3], box[4]}); //x1,y1,x2,y2,conf_class
-                output.put("tag",labels.get((int)box[5]));
+                output.put("box", new float[]{box[0], box[1], box[2], box[3], box[4]}); //x1,y1,x2,y2,conf_class
+                output.put("tag", labels.get((int) box[5]));
                 result.add(output);
             }
             return result;
-        }catch (Exception e){
+        } catch (Exception e) {
             throw e;
         }
     }
 
-    public void close(){
+    public void close() {
         try {
-            if (interpreter!=null)
+            if (interpreter != null)
                 interpreter.close();
-        }catch (Exception e){
-            throw  e;
+        } catch (Exception e) {
+            throw e;
         }
     }
 }
