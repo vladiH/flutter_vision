@@ -2,6 +2,7 @@ package com.vladih.computer_vision.flutter_vision.models;
 
 import static java.lang.Math.min;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
@@ -15,6 +16,7 @@ import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
 import org.tensorflow.lite.gpu.CompatibilityList;
 import org.tensorflow.lite.gpu.GpuDelegate;
+import org.tensorflow.lite.gpu.GpuDelegateFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -65,63 +67,68 @@ public class Yolo {
     public Tensor getInputTensor(){
         return this.interpreter.getInputTensor(0);
     }
+    @SuppressLint("SuspiciousIndentation")
     public void initialize_model() throws Exception {
         AssetManager asset_manager = null;
         MappedByteBuffer buffer = null;
         FileChannel file_channel = null;
         FileInputStream input_stream = null;
+
         try {
-            if (this.interpreter==null){
-                if(is_assets){
+            if (this.interpreter == null) {
+                if (is_assets) {
                     asset_manager = context.getAssets();
-                    AssetFileDescriptor file_descriptor = asset_manager.openFd(
-                            this.model_path);
+                    AssetFileDescriptor file_descriptor = asset_manager.openFd(this.model_path);
                     input_stream = new FileInputStream(file_descriptor.getFileDescriptor());
 
                     file_channel = input_stream.getChannel();
                     buffer = file_channel.map(
-                            FileChannel.MapMode.READ_ONLY,file_descriptor.getStartOffset(),
+                            FileChannel.MapMode.READ_ONLY, file_descriptor.getStartOffset(),
                             file_descriptor.getLength()
                     );
                     file_descriptor.close();
-
-                }else{
+                } else {
                     input_stream = new FileInputStream(new File(this.model_path));
                     file_channel = input_stream.getChannel();
-                    buffer = file_channel.map(FileChannel.MapMode.READ_ONLY,0,file_channel.size());
+                    buffer = file_channel.map(FileChannel.MapMode.READ_ONLY, 0, file_channel.size());
+                }
 
-                }
-                CompatibilityList compatibilityList = new CompatibilityList();
                 Interpreter.Options interpreterOptions = new Interpreter.Options();
-                interpreterOptions.setNumThreads(num_threads);
-                if(use_gpu){
-                    if(compatibilityList.isDelegateSupportedOnThisDevice()){
-                        GpuDelegate.Options gpuOptions = compatibilityList.getBestOptionsForThisDevice();
-                        interpreterOptions.addDelegate(
-                                new GpuDelegate(gpuOptions.setQuantizedModelsAllowed(true)));
+                try{
+                    // Check if GPU support is available
+                    CompatibilityList compatibilityList = new CompatibilityList();
+                    if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
+                        GpuDelegateFactory.Options delegateOptions = compatibilityList.getBestOptionsForThisDevice();
+                        GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(false));
+                        interpreterOptions.addDelegate(gpuDelegate);
+                    }else{
+                        interpreterOptions.setNumThreads(num_threads);
                     }
+                }catch (Exception e){
+                    interpreterOptions = new Interpreter.Options();
+                    interpreterOptions.setNumThreads(num_threads);
+
+                } finally {
+                    // Create the interpreter
+                    this.interpreter = new Interpreter(buffer, interpreterOptions);
                 }
-                //batch, width, height, channels
-                this.interpreter = new Interpreter(buffer,interpreterOptions);
                 this.interpreter.allocateTensors();
                 this.labels = load_labels(asset_manager, label_path);
-                int [] shape = interpreter.getOutputTensor(0).shape();
+                int[] shape = interpreter.getOutputTensor(0).shape();
                 this.output = new float[shape[0]][shape[1]][shape[2]];
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             throw e;
-        }finally {
-
-            if (buffer!=null)
+        } finally {
+            if (buffer != null)
                 buffer.clear();
-            if (file_channel!=null)
-                if (file_channel.isOpen())
-                    file_channel.close();
-            if(file_channel!=null)
-                if (file_channel.isOpen())
-                    input_stream.close();
+            if (file_channel != null && file_channel.isOpen()) {
+                file_channel.close();
+                input_stream.close();
+            }
         }
     }
+
     protected Vector<String> load_labels(AssetManager asset_manager, String label_path) throws Exception {
         BufferedReader br=null;
         try {
