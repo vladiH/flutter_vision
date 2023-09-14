@@ -1,7 +1,7 @@
 name: flutter_vision
 description: A Flutter plugin for managing Yolov5, Yolov8 and Tesseract v5 accessing with TensorFlow Lite 2.x. Support object detection and OCR on Android. iOS not updated, working in progress.
   
-version: 1.1.1
+version: 1.1.2
 
 homepage: https://github.com/vladiH/flutter_vision
 

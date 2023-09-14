@@ -1,6 +1,11 @@
+## 1.1.2
+* GPU delegation error has been fixed.
+* Coordinate representation of the box in documentation was fixed.
+* Switching between models now are supported.
+* Added quantization option for more efficient models at the cost of some precision.
 ## 1.1.1
-* Bounding box error has been fixed
-* Confidence scores for Yolov8 has been fixed
+* Bounding box error has been fixed.
+* Confidence scores for Yolov8 has been fixed.
 ## 1.1.0
 * loadOcrModel, ocrOnFrame, and closeOcrModel have been removed. Instead, Yolo and Tesseract operate independently of each other.
 * Models no longer returns responseHandler as output. Instead, it returns a List<Map<String, dynamic>>.

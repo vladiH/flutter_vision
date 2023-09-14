@@ -174,6 +174,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         final Object is_asset_obj = args.get("is_asset");
         final boolean is_asset = is_asset_obj == null ? false : (boolean) is_asset_obj;
         final int num_threads = (int) args.get("num_threads");
+        final boolean quantization = (boolean) args.get("quantization");
         final boolean use_gpu = (boolean) args.get("use_gpu");
         final String label_path = this.assets.getAssetFilePathByName(args.get("label_path").toString());
         final int rotation = (int) args.get("rotation");
@@ -185,6 +186,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
                         model,
                         is_asset,
                         num_threads,
+                        quantization,
                         use_gpu,
                         label_path,
                         rotation);
@@ -196,6 +198,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
                         model,
                         is_asset,
                         num_threads,
+                        quantization,
                         use_gpu,
                         label_path,
                         rotation);

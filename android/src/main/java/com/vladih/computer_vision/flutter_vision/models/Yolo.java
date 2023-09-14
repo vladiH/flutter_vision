@@ -44,6 +44,7 @@ public class Yolo {
     protected final String model_path;
     protected final boolean is_assets;
     protected final int num_threads;
+    protected final boolean quantization;
     protected final boolean use_gpu;
     protected final String label_path;
     protected final int rotation;
@@ -52,6 +53,7 @@ public class Yolo {
                 String model_path,
                 boolean is_assets,
                 int num_threads,
+                boolean quantization,
                 boolean use_gpu,
                 String label_path,
                 int rotation) {
@@ -59,6 +61,7 @@ public class Yolo {
         this.model_path = model_path;
         this.is_assets = is_assets;
         this.num_threads = num_threads;
+        this.quantization = quantization;
         this.use_gpu = use_gpu;
         this.label_path = label_path;
         this.rotation = rotation;
@@ -100,7 +103,7 @@ public class Yolo {
                 CompatibilityList compatibilityList = new CompatibilityList();
                 if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
                     GpuDelegateFactory.Options delegateOptions = compatibilityList.getBestOptionsForThisDevice();
-                    GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(false));
+                    GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(this.quantization));
                     interpreterOptions.addDelegate(gpuDelegate);
                 } else {
                     interpreterOptions.setNumThreads(num_threads);
@@ -173,6 +176,7 @@ public class Yolo {
     protected List<float[]> filter_box(float[][][] model_outputs, float iou_threshold,
                                        float conf_threshold, float class_threshold, float input_width, float input_height) {
         try {
+            //model_outputs = [1,box+model_conf+class,detected_box]
             List<float[]> pre_box = new ArrayList<>();
             int conf_index = 4;
             int class_index = 5;
@@ -188,12 +192,12 @@ public class Yolo {
                 conf = model_outputs[0][i][conf_index];
                 if (conf < conf_threshold) continue;
                 float max = 0;
-                int y = 0;
+                int max_index = 0;
                 for (int j = class_index; j < dimension; j++) {
                     if (model_outputs[0][i][j] < class_threshold) continue;
                     if (max < model_outputs[0][i][j]) {
                         max = model_outputs[0][i][j];
-                        y = j;
+                        max_index = j;
                     }
                 }
                 if (max > 0) {
@@ -202,8 +206,8 @@ public class Yolo {
                     tmp[1] = y1;
                     tmp[2] = x2;
                     tmp[3] = y2;
-                    tmp[4] = model_outputs[0][i][y];
-                    tmp[5] = (y - class_index) * 1f;
+                    tmp[4] = model_outputs[0][i][max_index];
+                    tmp[5] = (max_index - class_index) * 1f;
                     pre_box.add(tmp);
                 }
             }
@@ -220,10 +224,12 @@ public class Yolo {
 
     protected static List<float[]> nms(List<float[]> boxes, float iou_threshold) {
         try {
-            for (int i = 0; i < boxes.size(); i++) {
-                float[] box = boxes.get(i);
-                for (int j = i + 1; j < boxes.size(); j++) {
-                    float[] next_box = boxes.get(j);
+            List<float[]> filteredBoxes = new ArrayList<>(boxes); // Create a copy of the input list
+
+            for (int i = 0; i < filteredBoxes.size(); i++) {
+                float[] box = filteredBoxes.get(i);
+                for (int j = i + 1; j < filteredBoxes.size(); j++) {
+                    float[] next_box = filteredBoxes.get(j);
                     float x1 = Math.max(next_box[0], box[0]);
                     float y1 = Math.max(next_box[1], box[1]);
                     float x2 = Math.min(next_box[2], box[2]);
@@ -237,12 +243,12 @@ public class Yolo {
                             + (box[2] - box[0]) * (box[3] - box[1]) - intersection;
                     float iou = intersection / union;
                     if (iou > iou_threshold) {
-                        boxes.remove(j);
+                        filteredBoxes.remove(j);
                         j--;
                     }
                 }
             }
-            return boxes;
+            return filteredBoxes;
         } catch (Exception e) {
             Log.e("nms", e.getMessage());
             throw e;
@@ -281,40 +287,6 @@ public class Yolo {
             throw new RuntimeException(e.getMessage());
         }
     }
-
-    protected static float[][][] reshape(float[][][] input) {
-        final int x = input.length;
-        final int y = input[0].length;
-        final int z = input[0][0].length;
-        // Convert input array to OpenCV Mat [x y z] to [x z y]
-//        Mat inputMat = new Mat(x*y, z, CvType.CV_32F);
-//        for (int i = 0; i < x; i++) {
-//            for (int j = 0; j < y; j++) {
-//                inputMat.put(y*i+j, 0, input[i][j]);
-//            }
-//        }
-//        // Reshape Mat
-//        Mat outputMat = inputMat.reshape(y,x*z);
-//
-//        // Convert output Mat to float[][][] array
-//        float[][][] output = new float[x][z][y];
-//        for (int i = 0; i < x; i++) {
-//            for (int j = 0; j < z; j++) {
-//                outputMat.row(z*i+j).get(0, 0, output[i][j]);
-//            }
-//        }
-//        // Convert output Mat to float[][][] array
-        float[][][] output = new float[x][z][y];
-        for (int i = 0; i < x; i++) {
-            for (int j = 0; j < y; j++) {
-                for (int k = 0; k < z; k++) {
-                    output[i][k][j] = input[i][j][k];
-                }
-            }
-        }
-        return output;
-    }
-
     protected List<Map<String, Object>> out(List<float[]> yolo_result, Vector<String> labels) {
         try {
             List<Map<String, Object>> result = new ArrayList<>();

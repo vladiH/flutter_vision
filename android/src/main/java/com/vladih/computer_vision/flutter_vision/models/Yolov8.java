@@ -36,36 +36,36 @@ public class Yolov8 extends Yolo{
                   String model_path,
                   boolean is_assets,
                   int num_threads,
+                  boolean quantization,
                   boolean use_gpu,
                   String label_path,
                   int rotation) {
-        super(context, model_path, is_assets, num_threads, use_gpu, label_path, rotation);
+        super(context, model_path, is_assets, num_threads, quantization, use_gpu, label_path, rotation);
     }
 
     @Override
     protected List<float[]>filter_box(float [][][] model_outputs, float iou_threshold,
                                       float conf_threshold, float class_threshold, float input_width, float input_height){
         try {
-            //reshape [1,box+class,detected_box] to reshape [1,detected_box,box+class]
-            model_outputs = reshape(model_outputs);
+            //model_outputs = [1,box+class,detected_box]
             List<float[]> pre_box = new ArrayList<>();
             int class_index = 4;
             int dimension = model_outputs[0][0].length;
             int rows = model_outputs[0].length;
             float x1,y1,x2,y2;
-            for(int i=0; i<rows;i++){
+            for(int i=0; i<dimension;i++){
                 //convert xywh to xyxy
-                x1 = (model_outputs[0][i][0]-model_outputs[0][i][2]/2f);
-                y1 = (model_outputs[0][i][1]-model_outputs[0][i][3]/2f);
-                x2 = (model_outputs[0][i][0]+model_outputs[0][i][2]/2f);
-                y2 = (model_outputs[0][i][1]+model_outputs[0][i][3]/2f);
+                x1 = (model_outputs[0][0][i]-model_outputs[0][2][i]/2f);
+                y1 = (model_outputs[0][1][i]-model_outputs[0][3][i]/2f);
+                x2 = (model_outputs[0][0][i]+model_outputs[0][2][i]/2f);
+                y2 = (model_outputs[0][1][i]+model_outputs[0][3][i]/2f);
                 float max = 0;
-                int y = 0;
-                for(int j=class_index;j<dimension;j++){
-                    if (model_outputs[0][i][j]<class_threshold) continue;
-                    if (max<model_outputs[0][i][j]){
-                        max = model_outputs[0][i][j];
-                        y = j;
+                int max_index = 0;
+                for(int j=class_index;j<rows;j++){
+                    if (model_outputs[0][j][i]<class_threshold) continue;
+                    if (max<model_outputs[0][j][i]){
+                        max = model_outputs[0][j][i];
+                        max_index = j;
                     }
                 }
                 if (max>0){
@@ -74,8 +74,8 @@ public class Yolov8 extends Yolo{
                     tmp[1]=y1;
                     tmp[2]=x2;
                     tmp[3]=y2;
-                    tmp[4]=model_outputs[0][i][y];
-                    tmp[5]=(y-class_index)*1f;
+                    tmp[4]=model_outputs[0][max_index][i];
+                    tmp[5]=(max_index-class_index)*1f;
                     pre_box.add(tmp);
                 }
             }

@@ -399,6 +399,7 @@ class _YoloImageV5State extends State<YoloImageV5> {
         labels: 'assets/labels.txt',
         modelPath: 'assets/yolov5n.tflite',
         modelVersion: "yolov5",
+        quantization: false,
         numThreads: 2,
         useGpu: true);
     setState(() {
@@ -545,6 +546,7 @@ class _YoloImageV8State extends State<YoloImageV8> {
         labels: 'assets/labels.txt',
         modelPath: 'assets/yolov8n.tflite',
         modelVersion: "yolov8",
+        quantization: false,
         numThreads: 2,
         useGpu: true);
     setState(() {

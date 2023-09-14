@@ -68,6 +68,7 @@ abstract class BaseFlutterVision {
     required String modelPath,
     required String labels,
     required String modelVersion,
+    bool? quantization,
     int? numThreads,
     bool? useGpu,
   });

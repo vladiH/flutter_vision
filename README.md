@@ -48,6 +48,7 @@ await vision.loadYoloModel(
         labels: 'assets/labelss.txt',
         modelPath: 'assets/yolov5n.tflite',
         modelVersion: "yolov5",
+        quantization: false,
         numThreads: 1,
         useGpu: false);
 ```

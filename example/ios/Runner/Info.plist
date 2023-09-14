@@ -43,5 +43,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+
+	<key>NSCameraUsageDescription</key>
+	<string>Access to camera is necesary to run flutter_vision plugin</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Access to mycrophone is not necesary but camera plugin require it to run flutter_vision plugin</string>
 </dict>
 </plist>
