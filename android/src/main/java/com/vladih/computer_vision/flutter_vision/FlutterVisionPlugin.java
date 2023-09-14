@@ -242,21 +242,6 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
             this.class_threshold = (float) (double) (args.get("class_threshold"));
             this.result = result;
         }
-
-//    private DetectionTasks() {
-//      // Private constructor to prevent instantiation by other classes
-//    }
-
-        //    public static DetectionTasks getInstance(Yolo yolo, Map<String, Object> args, String typing, Result result) {
-//      if (instance == null) {
-//        synchronized (DetectionTasks.class) {
-//          if (instance == null) {
-//            instance = new DetectionTasks(yolo, args, typing, result);
-//          }
-//        }
-//      }
-//      return instance;
-//    }
         @Override
         public void run() {
             try {

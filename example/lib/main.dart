@@ -527,7 +527,7 @@ class _YoloImageV8State extends State<YoloImageV8> {
             children: [
               TextButton(
                 onPressed: pickImage,
-                child: const Text("Pick image"),
+                child: const Text("Pick an image"),
               ),
               ElevatedButton(
                 onPressed: yoloOnImage,
@@ -673,7 +673,7 @@ class _TesseractImageState extends State<TesseractImage> {
               children: [
                 TextButton(
                   onPressed: pickImage,
-                  child: const Text("Pick image"),
+                  child: const Text("Pick an image"),
                 ),
                 ElevatedButton(
                   onPressed: tesseractOnImage,
