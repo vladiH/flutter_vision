@@ -1,23 +1,26 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_vision/flutter_vision.dart';
+// import 'package:flutter_vision/flutter_vision.dart';
 
 void main() {
   const MethodChannel channel = MethodChannel('flutter_vision');
 
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    channel.setMockMethodCallHandler((MethodCall methodCall) async {
-      return '42';
-    });
-  });
+  handler(MethodCall methodCall) async {
+    if (methodCall.method == 'getAll') {
+      return <String, dynamic>{
+        'appName': 'myapp',
+        'packageName': 'com.mycompany.myapp',
+        'version': '0.0.1',
+        'buildNumber': '1'
+      };
+    }
+    return null;
+  }
 
-  tearDown(() {
-    channel.setMockMethodCallHandler(null);
-  });
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('getPlatformVersion', () async {
-    //expect(await FlutterVision.platformVersion, '42');
-  });
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(channel, handler);
 }
