@@ -1,6 +1,6 @@
 # flutter_vision
 
-A Flutter plugin for managing [Yolov5, Yolov8](https://github.com/ultralytics/ultralytics) and [Tesseract v5](https://tesseract-ocr.github.io/tessdoc/) accessing with TensorFlow Lite 2.x. Support object detection and OCR on Android. iOS not updated, working in progress.
+A Flutter plugin for managing [Yolov5, Yolov8](https://github.com/ultralytics/ultralytics) and [Tesseract v5](https://tesseract-ocr.github.io/tessdoc/) accessing with TensorFlow Lite 2.x. Support object detection, segmentation and OCR on Android. iOS not updated, working in progress.
 
 # Installation
 Add flutter_vision as a dependency in your pubspec.yaml file.
@@ -42,7 +42,7 @@ import 'package:flutter_vision/flutter_vision.dart';
 ```
 
 4. Load the model and labels:
-`modelVersion`: yolov5 or yolov8
+`modelVersion`: yolov5 or yolov8 or yolov8seg
 ```dart
 await vision.loadYoloModel(
         labels: 'assets/labelss.txt',
@@ -68,7 +68,7 @@ final result = await vision.yoloOnFrame(
 ```
 
 ### For static image
-5. Make your first detection:
+5. Make your first detection or segmentation:
 
 ```dart
 final result = await vision.yoloOnImage(
@@ -143,13 +143,24 @@ await vision.loadTesseractModel(
 await vision.closeTesseractModel();
 ```
 # About results
-## For Yolo
+## For Yolo v5 or v8 in detection task
 result is a `List<Map<String,dynamic>>` where Map have the following keys:
 
  ``` dart
     Map<String, dynamic>:{
      "box": [x1:left, y1:top, x2:right, y2:bottom, class_confidence]
      "tag": String: detected class
+    }
+```
+
+## For YoloV8 in segmentation task
+result is a `List<Map<String,dynamic>>` where Map have the following keys:
+
+ ``` dart
+    Map<String, dynamic>:{
+     "box": [x1:left, y1:top, x2:right, y2:bottom, class_confidence]
+     "tag": String: detected class
+     "polygons": List<Map<String, double>>: [{x:coordx, y:coordy}]
     }
 ```
 
@@ -165,5 +176,17 @@ result is a `List<Map<String,dynamic>>` where Map have the following keys:
 
 # Example
 ![Screenshot_2022-04-08-23-59-05-652_com vladih dni_scanner_example](https://user-images.githubusercontent.com/32783435/164163922-2eb7c8a3-8415-491f-883e-12cc87512efe.jpg)
-![Screenshot_2022-04-08-23-59-42-594_com vladih dni_scanner_example](https://user-images.githubusercontent.com/32783435/164163927-b290e46b-2af8-4b2b-a6a4-88cf4075f388.jpg)
-![Screenshot_2022-04-09-00-00-53-316_com vladih dni_scanner_example](https://user-images.githubusercontent.com/32783435/164163929-4b22310a-e6f6-4453-886b-7c7b622892de.jpg)
+<img src="https://github.com/vladiH/flutter_vision/assets/32783435/8fbbb9da-062e-4089-b1f6-1d4b2795664c" alt="Home" width="250" height="555">
+<img src="https://github.com/vladiH/flutter_vision/assets/32783435/51098356-8ed7-4c72-bce0-cf64d56976cd" alt="Detection" width="250" height="555">
+<img src="https://github.com/vladiH/flutter_vision/assets/32783435/0368ae2f-89ad-4a1a-a4c3-0548f0948421" alt="Segmentation" width="250" height="555">
+
+
+# <div align="center">Contact</div>
+
+For flutter_vision bug reports and feature requests please visit [GitHub Issues](https://github.com/vladiH/flutter_vision/issues)
+
+<br>
+<div align="center">
+  <a href="https://linktr.ee/randpoint" style="text-decoration:none;">
+    <img src="https://github.com/vladiH/flutter_vision/assets/32783435/75d2c677-65b5-4b9d-b332-d9d08602f024" width="3%" alt="" /></a>
+</div>

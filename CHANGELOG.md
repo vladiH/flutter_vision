@@ -1,3 +1,7 @@
+## 1.1.3
+* Release of segmentation feature via YOLOv8.
+* Updated example code.
+* Updated README.
 ## 1.1.2
 * GPU delegation error has been fixed.
 * Coordinate representation of the box in documentation was fixed.

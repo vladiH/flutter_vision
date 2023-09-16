@@ -90,7 +90,7 @@ public class Yolov8Seg extends Yolo {
                 List<int[]> seg_boxes_mask = new ArrayList<>();
                 for (float[] mask_weight : seg_boxes) {
                     seg_boxes_mask.add(compute_mask(mask_weight,
-                            masks[0], (float) 0.5,
+                            masks[0], (float) 0.3,
                             output1_shape[1], output1_shape[2]));
                 }
                 masks = null;
@@ -160,9 +160,9 @@ public class Yolov8Seg extends Yolo {
                         min(mask_height, Math.max(boxes.get(i)[3] * mask_height / source_height, 0))
                 );
 //            utils.getScreenshotBmp(crop, tag+"1");
-                List<List<Map<String, Double>>> crop_polygon = get_polygons_from_bitmap(crop, mask_height,
+                List<Map<String, Double>> crop_polygon = get_polygons_from_bitmap(crop, mask_height,
                         mask_width, source_height, source_width);
-                polygons.add(crop_polygon.get(0));
+                polygons.add(crop_polygon);
             }
             return polygons;
         } catch (Exception e) {
@@ -173,7 +173,7 @@ public class Yolov8Seg extends Yolo {
         }
     }
 
-    public static List<List<Map<String, Double>>> get_polygons_from_bitmap(Bitmap mask,
+    public static List<Map<String, Double>> get_polygons_from_bitmap(Bitmap mask,
                                                                            int mask_height,
                                                                            int mask_width,
                                                                            int source_height,
@@ -182,17 +182,28 @@ public class Yolov8Seg extends Yolo {
         List<MatOfPoint> contours = new ArrayList<>();
         Imgproc.findContours(maskMat, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        List<List<Point>> polygons = new ArrayList<>();
-        for (MatOfPoint contour : contours) {
-            List<Point> polygon = new ArrayList<>();
-            for (Point point : contour.toList()) {
-                polygon.add(point);
-            }
-            polygons.add(polygon);
-        }
-        List<List<Map<String, Double>>> converted_polygons = new ArrayList<>();
+        MatOfPoint largestContour = null;
+        double largestArea = 0;
 
-        for (List<Point> polygon : polygons) {
+        for (MatOfPoint contour : contours) {
+            double area = Imgproc.contourArea(contour);
+            if (area > largestArea) {
+                largestArea = area;
+                largestContour = contour;
+            }
+        }
+        List<Point> polygon = new ArrayList<>(largestContour.toList());
+//        List<List<Point>> polygons = new ArrayList<>();
+//        for (MatOfPoint contour : contours) {
+//            List<Point> polygon = new ArrayList<>();
+//            for (Point point : contour.toList()) {
+//                polygon.add(point);
+//            }
+//            polygons.add(polygon);
+//        }
+//        List<List<Map<String, Double>>> converted_polygons = new ArrayList<>();
+
+//        for (List<Point> polygon : polygons) {
             List<Map<String, Double>> convertedPolygon = new ArrayList<>();
             for (Point point : polygon) {
                 Map<String, Double> pointMap = new HashMap<>();
@@ -200,9 +211,10 @@ public class Yolov8Seg extends Yolo {
                 pointMap.put("y", point.y * source_height / mask_height);
                 convertedPolygon.add(pointMap);
             }
-            converted_polygons.add(convertedPolygon);
-        }
-        return converted_polygons;
+//            converted_polygons.add(convertedPolygon);
+//        }
+//        return converted_polygons;
+        return convertedPolygon;
     }
 
     private boolean has_multiple_output() {
@@ -221,7 +233,8 @@ public class Yolov8Seg extends Yolo {
             int rows = model_outputs[0].length;
             int index_mask = rows - 32;
             float[] mask_weight = new float[32];
-
+            int max_index = 0;
+            float max = 0f;
             for (int i = 0; i < dimension; i++) {
                 // Convertir xywh a xyxy y ajustar por el ancho y alto de entrada
                 float x1 = (model_outputs[0][0][i] - model_outputs[0][2][i] / 2f) * input_width;
@@ -229,8 +242,8 @@ public class Yolov8Seg extends Yolo {
                 float x2 = (model_outputs[0][0][i] + model_outputs[0][2][i] / 2f) * input_width;
                 float y2 = (model_outputs[0][1][i] + model_outputs[0][3][i] / 2f) * input_height;
 
-                int max_index = class_index;
-                float max = model_outputs[0][max_index][i];
+                max_index = class_index;
+                max = model_outputs[0][max_index][i];
 
                 for (int j = class_index + 1; j < index_mask; j++) {
                     float current = model_outputs[0][j][i];
@@ -256,7 +269,7 @@ public class Yolov8Seg extends Yolo {
             }
             if (pre_box.isEmpty()) return new ArrayList<>();
             //for reverse orden, insteand of using .reversed method
-            Comparator<float[]> compareValues = (v1, v2) -> Float.compare(v1[1], v2[1]);
+            Comparator<float[]> compareValues = (v1, v2) -> Float.compare(v2[4], v1[4]);
             //Collections.sort(pre_box,compareValues.reversed());
             Collections.sort(pre_box, compareValues);
             return nms(pre_box, iou_threshold);

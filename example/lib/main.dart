@@ -186,7 +186,7 @@ class _YoloVideoState extends State<YoloVideo> {
 
   init() async {
     cameras = await availableCameras();
-    controller = CameraController(cameras[0], ResolutionPreset.low);
+    controller = CameraController(cameras[0], ResolutionPreset.medium);
     controller.initialize().then((value) {
       loadYoloModel().then((value) {
         setState(() {
@@ -559,7 +559,7 @@ class _YoloImageV8State extends State<YoloImageV8> {
   Future<void> loadYoloModel() async {
     await widget.vision.loadYoloModel(
         labels: 'assets/labels.txt',
-        modelPath: 'assets/yolov8n-seg.tflite',
+        modelPath: 'assets/yolov8n.tflite',
         modelVersion: "yolov8",
         quantization: false,
         numThreads: 2,

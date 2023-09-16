@@ -59,11 +59,12 @@ public class Yolov8 extends Yolo {
                                                  float conf_threshold,
                                                  float class_threshold) throws Exception {
         try {
-            int[] shape = this.interpreter.getInputTensor(0).shape();
+            int[] input_shape = this.interpreter.getInputTensor(0).shape();
             this.interpreter.run(byteBuffer, this.output);
             //INFO: output from detection model is not normalized
-            List<float[]> boxes = filter_box(this.output, iou_threshold, conf_threshold, class_threshold, shape[1], shape[2]);
-            boxes = restore_size(boxes, shape[1], shape[2], source_width, source_height);
+            List<float[]> boxes = filter_box(this.output, iou_threshold, conf_threshold,
+                    class_threshold, input_shape[1], input_shape[2]);
+            boxes = restore_size(boxes, input_shape[1], input_shape[2], source_width, source_height);
             return out(boxes, this.labels);
         } catch (Exception e) {
             throw e;
@@ -81,15 +82,16 @@ public class Yolov8 extends Yolo {
             int class_index = 4;
             int dimension = model_outputs[0][0].length;
             int rows = model_outputs[0].length;
-
+            int max_index = 0;
+            float max = 0f;
             for (int i = 0; i < dimension; i++) {
                 float x1 = (model_outputs[0][0][i] - model_outputs[0][2][i] / 2f);
                 float y1 = (model_outputs[0][1][i] - model_outputs[0][3][i] / 2f);
                 float x2 = (model_outputs[0][0][i] + model_outputs[0][2][i] / 2f);
                 float y2 = (model_outputs[0][1][i] + model_outputs[0][3][i] / 2f);
 
-                int max_index = class_index;
-                float max = model_outputs[0][max_index][i];
+                max_index = class_index;
+                max = model_outputs[0][max_index][i];
 
                 for (int j = class_index + 1; j < rows; j++) {
                     float current = model_outputs[0][j][i];
@@ -112,7 +114,7 @@ public class Yolov8 extends Yolo {
             }
             if (pre_box.isEmpty()) return new ArrayList<>();
             //for reverse orden, insteand of using .reversed method
-            Comparator<float[]> compareValues = (v1, v2) -> Float.compare(v1[1], v2[1]);
+            Comparator<float[]> compareValues = (v1, v2) -> Float.compare(v2[4], v1[4]);
             //Collections.sort(pre_box,compareValues.reversed());
             Collections.sort(pre_box, compareValues);
             return nms(pre_box, iou_threshold);
