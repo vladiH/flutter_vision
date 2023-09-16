@@ -39,6 +39,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.Vector;
 
+//https://dev.to/andreygermanov/how-to-implement-instance-segmentation-using-yolov8-neural-network-3if9
+//PAPER: https://openaccess.thecvf.com/content_ICCV_2019/papers/Bolya_YOLACT_Real-Time_Instance_Segmentation_ICCV_2019_paper.pdf
 public class Yolov8Seg extends Yolo {
     public Yolov8Seg(Context context,
                      String model_path,
