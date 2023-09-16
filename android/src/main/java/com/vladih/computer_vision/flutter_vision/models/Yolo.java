@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -118,8 +119,8 @@ public class Yolo {
             }
             this.interpreter.allocateTensors();
             this.labels = load_labels(asset_manager, label_path);
-            int[] shape = interpreter.getOutputTensor(0).shape();
-            this.output = new float[shape[0]][shape[1]][shape[2]];
+            int[] shape = interpreter.getOutputTensor(0).shape();//3dimension
+            this.output = (float [][][]) Array.newInstance(float.class, shape);
         } catch (Exception e) {
             throw e;
         } finally {
@@ -161,10 +162,11 @@ public class Yolo {
                                                  float iou_threshold,
                                                  float conf_threshold, float class_threshold) throws Exception {
         try {
-            int[] shape = this.interpreter.getInputTensor(0).shape();
+            int[] input_shape = this.interpreter.getInputTensor(0).shape();
             this.interpreter.run(byteBuffer, this.output);
-            List<float[]> boxes = filter_box(this.output, iou_threshold, conf_threshold, class_threshold, shape[1], shape[2]);
-            boxes = restore_size(boxes, shape[1], shape[2], source_width, source_height);
+            List<float[]> boxes = filter_box(this.output, iou_threshold, conf_threshold,
+                    class_threshold, input_shape[1], input_shape[2]);
+            boxes = restore_size(boxes, input_shape[1], input_shape[2], source_width, source_height);
             return out(boxes, this.labels);
         } catch (Exception e) {
             throw e;
@@ -183,6 +185,8 @@ public class Yolo {
             int dimension = model_outputs[0][0].length;
             int rows = model_outputs[0].length;
             float x1, y1, x2, y2, conf;
+            int max_index = 0;
+            float max = 0f;
             for (int i = 0; i < rows; i++) {
                 //convert xywh to xyxy
                 x1 = (model_outputs[0][i][0] - model_outputs[0][i][2] / 2f) * input_width;
@@ -191,16 +195,18 @@ public class Yolo {
                 y2 = (model_outputs[0][i][1] + model_outputs[0][i][3] / 2f) * input_height;
                 conf = model_outputs[0][i][conf_index];
                 if (conf < conf_threshold) continue;
-                float max = 0;
-                int max_index = 0;
-                for (int j = class_index; j < dimension; j++) {
-                    if (model_outputs[0][i][j] < class_threshold) continue;
-                    if (max < model_outputs[0][i][j]) {
-                        max = model_outputs[0][i][j];
+
+                max_index = class_index;
+                max = model_outputs[0][i][max_index];
+
+                for (int j = class_index + 1; j < dimension; j++) {
+                    float current = model_outputs[0][i][j];
+                    if (current > max) {
+                        max = current;
                         max_index = j;
                     }
                 }
-                if (max > 0) {
+                if (max > class_threshold){
                     float[] tmp = new float[6];
                     tmp[0] = x1;
                     tmp[1] = y1;
@@ -213,7 +219,7 @@ public class Yolo {
             }
             if (pre_box.isEmpty()) return new ArrayList<>();
             //for reverse orden, insteand of using .reversed method
-            Comparator<float[]> compareValues = (v1, v2) -> Float.compare(v1[1], v2[1]);
+            Comparator<float[]> compareValues = (v1, v2) -> Float.compare(v2[4], v1[4]);
             //Collections.sort(pre_box,compareValues.reversed());
             Collections.sort(pre_box, compareValues);
             return nms(pre_box, iou_threshold);

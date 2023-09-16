@@ -32,7 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public class utils {
-    public static Bitmap crop_bitmap(Bitmap bitmap, float x1, float y1, float x2, float y2) throws Exception {
+    public static Bitmap crop_bitmap(Bitmap bitmap, float x1, float y1, float x2, float y2)  {
         try{
             final int x = Math.max((int)x1,0);
             final int y = Math.max((int)y1,0);
@@ -40,7 +40,7 @@ public class utils {
             final int height = Math.abs((int)(y2-y1));
             return  Bitmap.createBitmap(bitmap,x,y,width,height);
         }catch (Exception e){
-            throw  new Exception(e.getMessage());
+            throw  e;
         }
     }
     public static byte[] bitmap_to_byte(Bitmap bitmap){

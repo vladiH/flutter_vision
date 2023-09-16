@@ -11,6 +11,7 @@ import com.vladih.computer_vision.flutter_vision.models.Tesseract;
 import com.vladih.computer_vision.flutter_vision.models.Yolo;
 import com.vladih.computer_vision.flutter_vision.models.Yolov8;
 import com.vladih.computer_vision.flutter_vision.models.Yolov5;
+import com.vladih.computer_vision.flutter_vision.models.Yolov8Seg;
 import com.vladih.computer_vision.flutter_vision.utils.utils;
 
 import org.opencv.android.OpenCVLoader;
@@ -204,8 +205,21 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
                         rotation);
                 break;
             }
+
+            case "yolov8seg": {
+                yolo_model = new Yolov8Seg(
+                        context,
+                        model,
+                        is_asset,
+                        num_threads,
+                        quantization,
+                        use_gpu,
+                        label_path,
+                        rotation);
+                break;
+            }
             default: {
-                throw new Exception("Model version must be yolov5 or yolov8");
+                throw new Exception("Model version must be yolov5, yolov8 or yolov8seg");
             }
         }
         yolo_model.initialize_model();
