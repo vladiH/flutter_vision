@@ -544,7 +544,7 @@ class _YoloImageV8State extends State<YoloImageV8> {
   Future<void> loadYoloModel() async {
     await widget.vision.loadYoloModel(
         labels: 'assets/labels.txt',
-        modelPath: 'assets/yolov8n.tflite',
+        modelPath: 'assets/yolov8n-seg.tflite',
         modelVersion: "yolov8",
         quantization: false,
         numThreads: 2,
