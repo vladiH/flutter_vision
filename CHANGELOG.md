@@ -1,3 +1,5 @@
+## 1.1.4
+*  Resolved the YoloV8 output bug and made updates to the latest version. Please find the latest release on the Ultralytics YOLOv8 0.181 GitHub repository
 ## 1.1.3
 * Release of segmentation feature via YOLOv8.
 * Updated example code.

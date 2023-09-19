@@ -85,10 +85,10 @@ public class Yolov8 extends Yolo {
             int max_index = 0;
             float max = 0f;
             for (int i = 0; i < dimension; i++) {
-                float x1 = (model_outputs[0][0][i] - model_outputs[0][2][i] / 2f);
-                float y1 = (model_outputs[0][1][i] - model_outputs[0][3][i] / 2f);
-                float x2 = (model_outputs[0][0][i] + model_outputs[0][2][i] / 2f);
-                float y2 = (model_outputs[0][1][i] + model_outputs[0][3][i] / 2f);
+                float x1 = (model_outputs[0][0][i] - model_outputs[0][2][i] / 2f)* input_width;
+                float y1 = (model_outputs[0][1][i] - model_outputs[0][3][i] / 2f)* input_height;
+                float x2 = (model_outputs[0][0][i] + model_outputs[0][2][i] / 2f)* input_width;
+                float y2 = (model_outputs[0][1][i] + model_outputs[0][3][i] / 2f)* input_height;
 
                 max_index = class_index;
                 max = model_outputs[0][max_index][i];
