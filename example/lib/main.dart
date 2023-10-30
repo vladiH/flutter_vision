@@ -25,7 +25,7 @@ main() async {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -124,7 +124,7 @@ class _MyAppState extends State<MyApp> {
 
 class YoloVideo extends StatefulWidget {
   final FlutterVision vision;
-  const YoloVideo({Key? key, required this.vision}) : super(key: key);
+  const YoloVideo({super.key, required this.vision});
 
   @override
   State<YoloVideo> createState() => _YoloVideoState();
@@ -306,7 +306,7 @@ class _YoloVideoState extends State<YoloVideo> {
 
 class YoloImageV5 extends StatefulWidget {
   final FlutterVision vision;
-  const YoloImageV5({Key? key, required this.vision}) : super(key: key);
+  const YoloImageV5({super.key, required this.vision});
 
   @override
   State<YoloImageV5> createState() => _YoloImageV5State();
@@ -455,7 +455,7 @@ class _YoloImageV5State extends State<YoloImageV5> {
 
 class YoloImageV8Seg extends StatefulWidget {
   final FlutterVision vision;
-  const YoloImageV8Seg({Key? key, required this.vision}) : super(key: key);
+  const YoloImageV8Seg({super.key, required this.vision});
 
   @override
   State<YoloImageV8Seg> createState() => _YoloImageV8SegState();
