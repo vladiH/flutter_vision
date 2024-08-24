@@ -172,7 +172,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
     private void load_yolo_model(Map<String, Object> args) throws Exception {
         final String model = this.assets.getAssetFilePathByName(args.get("model_path").toString());
-        final Object is_asset_obj = args.get("is_asset");
+        final Object is_asset_obj = args.get("is_asset"); 
         final boolean is_asset = is_asset_obj == null ? false : (boolean) is_asset_obj;
         final int num_threads = (int) args.get("num_threads");
         final boolean quantization = (boolean) args.get("quantization");

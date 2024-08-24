@@ -87,11 +87,12 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
       required String modelVersion,
       bool? quantization,
       int? numThreads,
+      bool? is_asset,
       bool? useGpu}) async {
     try {
       await channel.invokeMethod<String?>('loadYoloModel', {
         'model_path': modelPath,
-        'is_asset': true,
+        'is_asset': is_asset ?? true,
         'quantization': quantization ?? false,
         'num_threads': numThreads ?? 1,
         'use_gpu': useGpu ?? false,

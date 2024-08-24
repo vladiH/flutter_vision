@@ -94,6 +94,7 @@ abstract class FlutterVision {
       required String modelVersion,
       bool? quantization,
       int? numThreads,
+      bool? is_asset,
       bool? useGpu});
 
   ///yoloOnFrame accept a byte List as input and

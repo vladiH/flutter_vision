@@ -70,6 +70,7 @@ abstract class BaseFlutterVision {
     bool? quantization,
     int? numThreads,
     bool? useGpu,
+    bool? is_asset,
   });
 
   Future<List<Map<String, dynamic>>> yoloOnFrame({
