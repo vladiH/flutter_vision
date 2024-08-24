@@ -174,15 +174,17 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         String model = "";
         final Object is_asset_obj = args.get("is_asset"); 
         final boolean is_asset = is_asset_obj == null ? false : (boolean) is_asset_obj;
+        String label_path = "";
         if(is_asset){
             model = this.assets.getAssetFilePathByName(args.get("model_path").toString());
+            label_path = this.assets.getAssetFilePathByName(args.get("label_path").toString());
         }else{
             model = args.get("model_path").toString();
+            label_path = args.get("label_path").toString();
         }
         final int num_threads = (int) args.get("num_threads");
         final boolean quantization = (boolean) args.get("quantization");
         final boolean use_gpu = (boolean) args.get("use_gpu");
-        final String label_path = this.assets.getAssetFilePathByName(args.get("label_path").toString());
         final int rotation = (int) args.get("rotation");
         final String version = args.get("model_version").toString();
         switch (version) {
