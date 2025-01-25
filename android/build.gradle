@@ -50,7 +50,6 @@ android {
     buildFeatures{
         mlModelBinding true
     }
-    buildToolsVersion '36.0.0 rc3'
 
 }
 dependencies{

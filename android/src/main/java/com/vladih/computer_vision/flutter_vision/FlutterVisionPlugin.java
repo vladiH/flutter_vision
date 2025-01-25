@@ -97,8 +97,9 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         }
     }
 
+    // FlutterVisionPlugin.java
     private synchronized boolean isModelLoaded() {
-        return yolo_model != null && yolo_model.interpreter != null;
+        return yolo_model != null && yolo_model.isInitialized();
     }
 
     private void load_yolo_model(Map<String, Object> args) throws Exception {
@@ -204,7 +205,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         @Override
         public void run() {
             try {
-                if (yolo == null || yolo.interpreter == null) {
+                if (yolo == null || !yolo.isInitialized()) {
                     throw new Exception("Model not initialized");
                 }
 
@@ -288,4 +289,5 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
             yolo_model = null;
         }
     }
+
 }

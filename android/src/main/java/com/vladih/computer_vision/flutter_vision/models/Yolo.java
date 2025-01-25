@@ -266,6 +266,11 @@ public class Yolo {
         }
     }
 
+    public boolean isInitialized() {
+        return interpreter != null;
+    }
+
+
     protected List<float[]> restore_size(List<float[]> nms,
                                          int input_width,
                                          int input_height,
