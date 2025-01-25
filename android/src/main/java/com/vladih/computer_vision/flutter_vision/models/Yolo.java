@@ -2,16 +2,11 @@ package com.vladih.computer_vision.flutter_vision.models;
 
 import static java.lang.Math.min;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.util.Log;
 
-import com.vladih.computer_vision.flutter_vision.utils.FeedInputTensorHelper;
-
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
 import org.tensorflow.lite.gpu.CompatibilityList;
@@ -19,7 +14,6 @@ import org.tensorflow.lite.gpu.GpuDelegate;
 import org.tensorflow.lite.gpu.GpuDelegateFactory;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Array;
@@ -33,9 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
-
-import io.flutter.embedding.engine.FlutterEngine;
-import io.flutter.embedding.engine.plugins.FlutterPlugin;
 
 public class Yolo {
     protected float[][][] output;
@@ -68,15 +59,15 @@ public class Yolo {
         this.rotation = rotation;
     }
 
-    //    public Vector<String> getLabels(){return this.labels;}
     public Tensor getInputTensor() {
+        if (interpreter == null) return null;
         return this.interpreter.getInputTensor(0);
     }
 
-    @SuppressLint("SuspiciousIndentation")
+
     public void initialize_model() throws Exception {
         AssetManager asset_manager = null;
-        MappedByteBuffer buffer = null;
+        MappedByteBuffer buffer;
         FileChannel file_channel = null;
         FileInputStream input_stream = null;
 
@@ -85,73 +76,83 @@ public class Yolo {
                 asset_manager = context.getAssets();
                 AssetFileDescriptor file_descriptor = asset_manager.openFd(this.model_path);
                 input_stream = new FileInputStream(file_descriptor.getFileDescriptor());
-
                 file_channel = input_stream.getChannel();
                 buffer = file_channel.map(
-                        FileChannel.MapMode.READ_ONLY, file_descriptor.getStartOffset(),
+                        FileChannel.MapMode.READ_ONLY,
+                        file_descriptor.getStartOffset(),
                         file_descriptor.getLength()
                 );
                 file_descriptor.close();
             } else {
-                input_stream = new FileInputStream(new File(this.model_path));
+                input_stream = new FileInputStream(this.model_path);
                 file_channel = input_stream.getChannel();
                 buffer = file_channel.map(FileChannel.MapMode.READ_ONLY, 0, file_channel.size());
             }
 
             Interpreter.Options interpreterOptions = new Interpreter.Options();
-            try {
-                // Check if GPU support is available
-                CompatibilityList compatibilityList = new CompatibilityList();
-                if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
+            CompatibilityList compatibilityList = new CompatibilityList();
+
+            if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
+                try {
                     GpuDelegateFactory.Options delegateOptions = compatibilityList.getBestOptionsForThisDevice();
                     GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(this.quantization));
                     interpreterOptions.addDelegate(gpuDelegate);
-                } else {
+                } catch (Exception e) {
+                    Log.e("Yolo", "GPU delegate failed, falling back to CPU", e);
+                    interpreterOptions = new Interpreter.Options();
                     interpreterOptions.setNumThreads(num_threads);
                 }
-                // Create the interpreter
-                this.interpreter = new Interpreter(buffer, interpreterOptions);
-            } catch (Exception e) {
-                interpreterOptions = new Interpreter.Options();
+            } else {
                 interpreterOptions.setNumThreads(num_threads);
-                // Create the interpreter
-                this.interpreter = new Interpreter(buffer, interpreterOptions);
             }
+
+            this.interpreter = new Interpreter(buffer, interpreterOptions);
             this.interpreter.allocateTensors();
             this.labels = load_labels(asset_manager, label_path);
-            int[] shape = interpreter.getOutputTensor(0).shape();//3dimension
-            this.output = (float [][][]) Array.newInstance(float.class, shape);
+            int[] shape = interpreter.getOutputTensor(0).shape();
+            this.output = (float[][][]) Array.newInstance(float.class, shape);
         } catch (Exception e) {
-            throw e;
+            throw new Exception("Model initialization failed: " + e.getMessage());
         } finally {
-            if (buffer != null)
-                buffer.clear();
-            if (file_channel != null && file_channel.isOpen()) {
-                file_channel.close();
-                input_stream.close();
+            try {
+                if (file_channel != null && file_channel.isOpen()) {
+                    file_channel.close();
+                }
+                if (input_stream != null) {
+                    input_stream.close();
+                }
+            } catch (Exception e) {
+                Log.e("Yolo", "Resource cleanup error", e);
             }
         }
     }
 
     protected Vector<String> load_labels(AssetManager asset_manager, String label_path) throws Exception {
+        if (label_path == null || label_path.isEmpty()) {
+            throw new Exception("Invalid label path");
+        }
+
         BufferedReader br = null;
         try {
             if (asset_manager != null) {
                 br = new BufferedReader(new InputStreamReader(asset_manager.open(label_path)));
             } else {
-                br = new BufferedReader(new InputStreamReader(new FileInputStream(new File(label_path))));
+                br = new BufferedReader(new InputStreamReader(new FileInputStream(label_path)));
             }
-            String line;
+
             Vector<String> labels = new Vector<>();
+            String line;
             while ((line = br.readLine()) != null) {
                 labels.add(line);
             }
             return labels;
         } catch (Exception e) {
-            throw new Exception(e.getMessage());
+            throw new Exception("Label loading failed: " + e.getMessage());
         } finally {
-            if (br != null) {
-                br.close();
+            try {
+                if (br != null) br.close();
+            } catch (Exception e) {
+                Log.e("Yolo", "Label reader close error", e);
             }
         }
     }
@@ -161,6 +162,10 @@ public class Yolo {
                                                  int source_width,
                                                  float iou_threshold,
                                                  float conf_threshold, float class_threshold) throws Exception {
+        if (interpreter == null) {
+            throw new Exception("Interpreter not initialized");
+        }
+
         try {
             int[] input_shape = this.interpreter.getInputTensor(0).shape();
             this.interpreter.run(byteBuffer, this.output);
@@ -169,7 +174,7 @@ public class Yolo {
             boxes = restore_size(boxes, input_shape[1], input_shape[2], source_width, source_height);
             return out(boxes, this.labels);
         } catch (Exception e) {
-            throw e;
+            throw new Exception("Detection failed: " + e.getMessage());
         } finally {
             byteBuffer.clear();
         }
@@ -185,8 +190,8 @@ public class Yolo {
             int dimension = model_outputs[0][0].length;
             int rows = model_outputs[0].length;
             float x1, y1, x2, y2, conf;
-            int max_index = 0;
-            float max = 0f;
+            int max_index;
+            float max;
             for (int i = 0; i < rows; i++) {
                 //convert xywh to xyxy
                 x1 = (model_outputs[0][i][0] - model_outputs[0][i][2] / 2f) * input_width;
@@ -256,7 +261,7 @@ public class Yolo {
             }
             return filteredBoxes;
         } catch (Exception e) {
-            Log.e("nms", e.getMessage());
+            Log.e("nms", e.getMessage() != null ? e.getMessage() : "Unknown error");
             throw e;
         }
     }
@@ -311,10 +316,12 @@ public class Yolo {
 
     public void close() {
         try {
-            if (interpreter != null)
+            if (interpreter != null) {
                 interpreter.close();
+                interpreter = null;
+            }
         } catch (Exception e) {
-            throw e;
+            Log.e("Yolo", "Interpreter close error", e);
         }
     }
 }

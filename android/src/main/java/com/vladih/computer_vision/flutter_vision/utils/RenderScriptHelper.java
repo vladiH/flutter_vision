@@ -2,7 +2,6 @@ package com.vladih.computer_vision.flutter_vision.utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
@@ -12,12 +11,13 @@ import android.renderscript.Type;
 public class RenderScriptHelper {
     private static RenderScriptHelper instance;
 
-    private RenderScript rs;
-    private ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic;
-    private Type.Builder yuvType;
-    private Type.Builder rgbaType;
+    private final RenderScript rs;
+    private final ScriptIntrinsicYuvToRGB yuvToRgbIntrinsic;
     private Allocation in;
     private Allocation out;
+    private int lastWidth = -1;
+    private int lastHeight = -1;
+    private int lastNv21Length = -1;
 
     private RenderScriptHelper(Context context) {
         rs = RenderScript.create(context);
@@ -32,22 +32,22 @@ public class RenderScriptHelper {
     }
 
     public Allocation renderScriptNV21ToRGBA888(int width, int height, byte[] nv21) {
-        if (yuvType == null) {
-            yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
-        }
-        if (rgbaType == null) {
-            rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
-        }
-        // Create input allocation for YUV data
-        if (in == null) {
+        // Recreate YUV allocation if NV21 array size changes
+        if (nv21.length != lastNv21Length) {
+            Type.Builder yuvType = new Type.Builder(rs, Element.U8(rs)).setX(nv21.length);
             in = Allocation.createTyped(rs, yuvType.create(), Allocation.USAGE_SCRIPT);
-        }
-        // Create output allocation for RGBA data
-        if (out == null) {
-            out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+            lastNv21Length = nv21.length;
         }
 
-        // Convert YUV to RGBA using RenderScript intrinsic
+        // Recreate RGBA allocation if dimensions change
+        if (width != lastWidth || height != lastHeight) {
+            Type.Builder rgbaType = new Type.Builder(rs, Element.RGBA_8888(rs)).setX(width).setY(height);
+            out = Allocation.createTyped(rs, rgbaType.create(), Allocation.USAGE_SCRIPT);
+            lastWidth = width;
+            lastHeight = height;
+        }
+
+        // Convert YUV to RGBA
         in.copyFrom(nv21);
         yuvToRgbIntrinsic.setInput(in);
         yuvToRgbIntrinsic.forEach(out);
