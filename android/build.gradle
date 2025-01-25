@@ -8,7 +8,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath 'com.android.tools.build:gradle:8.4.2'
     }
 }
 
@@ -16,9 +16,6 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
-        flatDir{
-            dirs project(":flutter_vision").file("libs")
-        }
         maven {
             url 'https://jitpack.io'
         }
@@ -53,15 +50,13 @@ android {
     }
 }
 dependencies{
-    //implementation (files('libs/tesseract4android-release.aar'))
-    api(name:"tesseract4android-release", ext: "aar")
     implementation 'com.github.vladiH:opencv-android:v1.0.0'
-    implementation 'org.tensorflow:tensorflow-lite:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-api:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-metadata:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.11.0'
+    implementation 'org.tensorflow:tensorflow-lite:2.17.0'
+    implementation 'org.tensorflow:tensorflow-lite-api:2.17.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:2.17.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.17.0'
+    implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.4'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.5.0'
+    implementation 'org.tensorflow:tensorflow-lite-metadata:0.5.0'
+    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.16.1'
 }
