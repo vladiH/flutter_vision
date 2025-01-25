@@ -23,6 +23,7 @@ rootProject.allprojects {
             name 'ossrh-snapshot'
             url 'https://oss.sonatype.org/content/repositories/snapshots'
         }
+
     }
 }
 
@@ -39,6 +40,7 @@ android {
 
     defaultConfig {
         minSdkVersion 21
+        targetSdk 35
     }
     aaptOptions {
         noCompress 'tflite'
@@ -48,6 +50,7 @@ android {
     buildFeatures{
         mlModelBinding true
     }
+
 }
 dependencies{
     implementation 'com.github.vladiH:opencv-android:v1.0.0'

@@ -1,42 +1,14 @@
 package com.vladih.computer_vision.flutter_vision.models;
 
-import static java.lang.Math.min;
-
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
-import android.content.res.AssetManager;
-import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.util.Log;
 
-import com.vladih.computer_vision.flutter_vision.utils.utils;
-
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
-import org.opencv.imgproc.Imgproc;
-import org.tensorflow.lite.Interpreter;
-import org.tensorflow.lite.gpu.CompatibilityList;
-import org.tensorflow.lite.gpu.GpuDelegate;
-import org.tensorflow.lite.schema.Buffer;
-import org.tensorflow.lite.schema.ReshapeOptions;
-import org.tensorflow.lite.support.image.ImageProcessor;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Vector;
 
 public class Yolov8 extends Yolo {
