@@ -8,6 +8,7 @@ import android.content.res.AssetManager;
 import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
+import org.tensorflow.lite.Tensor;
 import org.tensorflow.lite.gpu.CompatibilityList;
 import org.tensorflow.lite.gpu.GpuDelegate;
 
@@ -55,6 +56,12 @@ public class Yolo {
         this.use_gpu = use_gpu;
         this.label_path = label_path;
         this.rotation = rotation;
+    }
+
+
+    public Tensor getInputTensor() {
+        if (interpreter == null) return null;
+        return this.interpreter.getInputTensor(0);
     }
 
     public void initialize_model() throws Exception {
