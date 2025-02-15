@@ -54,12 +54,7 @@ android {
 }
 dependencies{
     implementation 'com.github.vladiH:opencv-android:v1.0.0'
-    implementation 'org.tensorflow:tensorflow-lite:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-api:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-metadata:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.11.0'
+    implementation 'com.google.android.gms:play-services-tflite-java:16.1.0'
+    implementation 'com.google.android.gms:play-services-tflite-support:16.1.0'
+    implementation 'com.google.android.gms:play-services-tflite-gpu:16.2.0'
 }
