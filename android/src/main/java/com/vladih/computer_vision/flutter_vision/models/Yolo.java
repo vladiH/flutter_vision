@@ -208,10 +208,10 @@ public class Yolo {
             int max_index;
             float max;
             for (int i = 0; i < rows; i++) {
-                x1 = (model_outputs[0][i][0] - model_outputs[0][i][2] / 2 f) * input_width;
-                y1 = (model_outputs[0][i][1] - model_outputs[0][i][3] / 2 f) * input_height;
-                x2 = (model_outputs[0][i][0] + model_outputs[0][i][2] / 2 f) * input_width;
-                y2 = (model_outputs[0][i][1] + model_outputs[0][i][3] / 2 f) * input_height;
+                x1 = (model_outputs[0][i][0] - model_outputs[0][i][2] / 2f) * input_width;
+                y1 = (model_outputs[0][i][1] - model_outputs[0][i][3] / 2f) * input_height;
+                x2 = (model_outputs[0][i][0] + model_outputs[0][i][2] / 2f) * input_width;
+                y2 = (model_outputs[0][i][1] + model_outputs[0][i][3] / 2f) * input_height;
                 conf = model_outputs[0][i][conf_index];
                 if (conf < conf_threshold) continue;
                 max_index = class_index;
@@ -230,12 +230,12 @@ public class Yolo {
                     tmp[2] = x2;
                     tmp[3] = y2;
                     tmp[4] = model_outputs[0][i][max_index];
-                    tmp[5] = (max_index - class_index) * 1 f;
+                    tmp[5] = (max_index - class_index) * 1f;
                     pre_box.add(tmp);
                 }
             }
             if (pre_box.isEmpty()) return new ArrayList < > ();
-            Comparator < float[] > compareValues = (v1, v2) - > Float.compare(v2[4], v1[4]);
+            Comparator <float[]> compareValues = (v1, v2) -> Float.compare(v2[4], v1[4]);
             Collections.sort(pre_box, compareValues);
             return nms(pre_box, iou_threshold);
         } catch (Exception e) {
@@ -293,8 +293,8 @@ public class Yolo {
                     nms.get(i)[3] = min(src_height, Math.max(nms.get(i)[3] * gainy, 0));
                 }
             } else {
-                float padx = (src_width - input_width) / 2 f;
-                float pady = (src_height - input_height) / 2 f;
+                float padx = (src_width - input_width) / 2f;
+                float pady = (src_height - input_height) / 2f;
                 for (int i = 0; i < nms.size(); i++) {
                     nms.get(i)[0] = min(src_width, Math.max(nms.get(i)[0] + padx, 0));
                     nms.get(i)[1] = min(src_height, Math.max(nms.get(i)[1] + pady, 0));
