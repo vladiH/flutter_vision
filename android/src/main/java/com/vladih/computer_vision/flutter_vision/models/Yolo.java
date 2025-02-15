@@ -11,6 +11,7 @@ import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.Tensor;
 import org.tensorflow.lite.gpu.CompatibilityList;
 import org.tensorflow.lite.gpu.GpuDelegate;
+import org.tensorflow.lite.gpu.GpuDelegateFactory;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -88,24 +89,25 @@ public class Yolo {
                 buffer = file_channel.map(FileChannel.MapMode.READ_ONLY, 0, file_channel.size());
             }
 
-            // Initialize interpreter with GPU delegate
             Interpreter.Options interpreterOptions = new Interpreter.Options();
-            CompatibilityList compatList = new CompatibilityList();
-
-            if (use_gpu && compatList.isDelegateSupportedOnThisDevice()) {
-                try {
-                    GpuDelegate.Options delegateOptions = compatList.getBestOptionsForThisDevice();
-                    GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions);
+            try {
+                // Check if GPU support is available
+                CompatibilityList compatibilityList = new CompatibilityList();
+                if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
+                    GpuDelegateFactory.Options delegateOptions = compatibilityList.getBestOptionsForThisDevice();
+                    GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(this.quantization));
                     interpreterOptions.addDelegate(gpuDelegate);
-                } catch (Exception e) {
-                    Log.e("Yolo", "GPU delegate failed, falling back to CPU", e);
+                } else {
                     interpreterOptions.setNumThreads(num_threads);
                 }
-            } else {
+                // Create the interpreter
+                this.interpreter = new Interpreter(buffer, interpreterOptions);
+            } catch (Exception e) {
+                interpreterOptions = new Interpreter.Options();
                 interpreterOptions.setNumThreads(num_threads);
+                // Create the interpreter
+                this.interpreter = new Interpreter(buffer, interpreterOptions);
             }
-
-            this.interpreter = new Interpreter(buffer, interpreterOptions);
             this.interpreter.allocateTensors();
             this.labels = load_labels(asset_manager, label_path);
             int[] shape = interpreter.getOutputTensor(0).shape();
