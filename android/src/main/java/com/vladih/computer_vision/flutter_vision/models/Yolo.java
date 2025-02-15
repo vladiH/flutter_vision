@@ -8,10 +8,8 @@ import android.content.res.AssetManager;
 import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
-import org.tensorflow.lite.Tensor;
 import org.tensorflow.lite.gpu.CompatibilityList;
 import org.tensorflow.lite.gpu.GpuDelegate;
-import org.tensorflow.lite.gpu.GpuDelegateFactory;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -59,12 +57,6 @@ public class Yolo {
         this.rotation = rotation;
     }
 
-    public Tensor getInputTensor() {
-        if (interpreter == null) return null;
-        return this.interpreter.getInputTensor(0);
-    }
-
-
     public void initialize_model() throws Exception {
         AssetManager asset_manager = null;
         MappedByteBuffer buffer;
@@ -89,17 +81,17 @@ public class Yolo {
                 buffer = file_channel.map(FileChannel.MapMode.READ_ONLY, 0, file_channel.size());
             }
 
+            // Initialize interpreter with GPU delegate
             Interpreter.Options interpreterOptions = new Interpreter.Options();
-            CompatibilityList compatibilityList = new CompatibilityList();
+            CompatibilityList compatList = new CompatibilityList();
 
-            if (use_gpu && compatibilityList.isDelegateSupportedOnThisDevice()) {
+            if (use_gpu && compatList.isDelegateSupportedOnThisDevice()) {
                 try {
-                    GpuDelegateFactory.Options delegateOptions = compatibilityList.getBestOptionsForThisDevice();
-                    GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions.setQuantizedModelsAllowed(this.quantization));
+                    GpuDelegate.Options delegateOptions = compatList.getBestOptionsForThisDevice();
+                    GpuDelegate gpuDelegate = new GpuDelegate(delegateOptions);
                     interpreterOptions.addDelegate(gpuDelegate);
                 } catch (Exception e) {
                     Log.e("Yolo", "GPU delegate failed, falling back to CPU", e);
-                    interpreterOptions = new Interpreter.Options();
                     interpreterOptions.setNumThreads(num_threads);
                 }
             } else {
@@ -266,9 +258,6 @@ public class Yolo {
         }
     }
 
-    public boolean isInitialized() {
-        return interpreter != null;
-    }
 
 
     protected List<float[]> restore_size(List<float[]> nms,
