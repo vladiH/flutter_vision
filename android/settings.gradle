@@ -1,1 +1,3 @@
-rootProject.name = "flutter_vision"
+include ':app'
+    include ':flutter_vision'
+    rootProject.name = "flutter_vision"

@@ -1,5 +1,5 @@
-group 'com.vladih.computer_vision.flutter_vision'
-version '1.0'
+group = "com.vladih.computer_vision.flutter_vision"
+version = "1.0"
 
 buildscript {
     repositories {
@@ -8,7 +8,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath 'com.android.tools.build:gradle:8.1.0'
     }
 }
 
@@ -16,32 +16,50 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
-        flatDir{
+        flatDir {
             dirs project(":flutter_vision").file("libs")
         }
         maven {
             url 'https://jitpack.io'
         }
-        maven{
+        maven {
             name 'ossrh-snapshot'
             url 'https://oss.sonatype.org/content/repositories/snapshots'
         }
     }
 }
 
-apply plugin: 'com.android.library'
+apply plugin: "com.android.library"
 
 android {
-    compileSdkVersion 31
+    namespace = "com.vladih.computer_vision.flutter_vision"
+
+    compileSdk = 35
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     defaultConfig {
-        minSdkVersion 21
+        minSdk = 21
     }
+
+    dependencies {
+        testImplementation("junit:junit:4.13.2")
+        testImplementation("org.mockito:mockito-core:5.0.0")
+        api(name:"tesseract4android-release", ext: "aar")
+        implementation 'com.github.vladiH:opencv-android:v1.0.0'
+        implementation 'org.tensorflow:tensorflow-lite:2.10.0'
+        implementation 'org.tensorflow:tensorflow-lite-api:2.10.0'
+        implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
+        implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
+        implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.3'
+        implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
+        implementation 'org.tensorflow:tensorflow-lite-metadata:0.4.3'
+        implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.11.0'
+    }
+
     aaptOptions {
         noCompress 'tflite'
         noCompress 'lite'
@@ -50,17 +68,14 @@ android {
     buildFeatures{
         mlModelBinding true
     }
-}
-dependencies{
-    //implementation (files('libs/tesseract4android-release.aar'))
-    api(name:"tesseract4android-release", ext: "aar")
-    implementation 'com.github.vladiH:opencv-android:v1.0.0'
-    implementation 'org.tensorflow:tensorflow-lite:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-api:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-metadata:0.4.3'
-    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.11.0'
+
+    testOptions {
+        unitTests.all {
+            testLogging {
+                events "passed", "skipped", "failed", "standardOut", "standardError"
+                outputs.upToDateWhen {false}
+                showStandardStreams = true
+            }
+        }
+    }
 }
