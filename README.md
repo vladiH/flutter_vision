@@ -37,7 +37,7 @@ import 'package:flutter_vision/flutter_vision.dart';
 
 3. Initialized the flutter_vision library:
 
-```dart 
+```dart
  FlutterVision vision = FlutterVision();
 ```
 
@@ -110,7 +110,7 @@ import 'package:flutter_vision/flutter_vision.dart';
 
 4. Initialized the flutter_vision library:
 
-```dart 
+```dart
  FlutterVision vision = FlutterVision();
 ```
 

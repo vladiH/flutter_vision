@@ -7,6 +7,11 @@ import android.graphics.Matrix;
 
 import androidx.annotation.NonNull;
 
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import android.util.Log;
+
 import com.vladih.computer_vision.flutter_vision.models.Tesseract;
 import com.vladih.computer_vision.flutter_vision.models.Yolo;
 import com.vladih.computer_vision.flutter_vision.models.Yolov8;
@@ -31,6 +36,7 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import android.content.Context;
 
 /**
  * FlutterVisionPlugin
@@ -42,6 +48,7 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
     private FlutterAssets assets;
     private Yolo yolo_model;
     private Tesseract tesseract_model;
+    private BaseLoaderCallback mLoaderCallback; // Add this line
 
     private ExecutorService executor;
 
@@ -51,6 +58,36 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+
+        channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "flutter_vision");
+        channel.setMethodCallHandler(this);
+        applicationContext = flutterPluginBinding.getApplicationContext();
+
+        mLoaderCallback = new BaseLoaderCallback(applicationContext) {
+            @Override
+            public void onManagerConnected(int status) {
+                switch (status) {
+                    case LoaderCallbackInterface.SUCCESS:
+                    {
+                        Log.i("OpenCV", "OpenCV loaded successfully");
+                        //  Any initialization that depends on OpenCV goes HERE.
+                    } break;
+                    default:
+                    {
+                        super.onManagerConnected(status);
+                    } break;
+                }
+            }
+        };
+
+        if (!OpenCVLoader.initDebug()) {
+            Log.d("OpenCV", "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, applicationContext, mLoaderCallback);
+        } else {
+            Log.d("OpenCV", "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+
         setupChannel(binding.getApplicationContext(), binding.getFlutterAssets(), binding.getBinaryMessenger());
     }
 
