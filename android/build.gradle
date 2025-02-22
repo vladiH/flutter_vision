@@ -42,7 +42,7 @@ android {
 
     defaultConfig {
         minSdkVersion 21
-        applicationId "com.vladih.computer_vision.flutter_vision" // Good practice, but not the core issue.  Match the namespace.
+        // applicationId "com.vladih.computer_vision.flutter_vision" // Good practice, but not the core issue.  Match the namespace.
     }
     aaptOptions {
         noCompress 'tflite'
