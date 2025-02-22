@@ -32,7 +32,7 @@ rootProject.allprojects {
 apply plugin: 'com.android.library'
 
 android {
-    namespace "com.example.flutter_vision"
+    namespace "com.vladih.computer_vision.flutter_vision" // Corrected namespace
     compileSdkVersion 31
 
     compileOptions {
@@ -42,6 +42,7 @@ android {
 
     defaultConfig {
         minSdkVersion 21
+        applicationId "com.vladih.computer_vision.flutter_vision" // Good practice, but not the core issue.  Match the namespace.
     }
     aaptOptions {
         noCompress 'tflite'
@@ -55,7 +56,7 @@ android {
 dependencies{
     //implementation (files('libs/tesseract4android-release.aar'))
     api(name:"tesseract4android-release", ext: "aar")
-    implementation 'com.github.vladiH:opencv-android:v1.0.0'
+    // implementation 'com.github.vladiH:opencv-android:v1.0.0' // Potentially conflicting.  Comment out and test.
     implementation 'org.tensorflow:tensorflow-lite:2.10.0'
     implementation 'org.tensorflow:tensorflow-lite-api:2.10.0'
     implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
