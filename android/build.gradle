@@ -1,66 +1,128 @@
-group 'com.vladih.computer_vision.flutter_vision'
+ group 'com.vladih.computer_vision.flutter_vision'
+
 version '1.0'
 
+
 buildscript {
+
     repositories {
+
         google()
+
         mavenCentral()
+
     }
+
 
     dependencies {
+
         classpath 'com.android.tools.build:gradle:7.1.2'
+
     }
+
 }
 
+
 rootProject.allprojects {
+
     repositories {
+
         google()
+
         mavenCentral()
+
         flatDir{
+
             dirs project(":flutter_vision").file("libs")
+
         }
+
         maven {
+
             url 'https://jitpack.io'
+
         }
+
         maven{
+
             name 'ossrh-snapshot'
+
             url 'https://oss.sonatype.org/content/repositories/snapshots'
+
         }
+
     }
+
 }
+
 
 apply plugin: 'com.android.library'
 
+
 android {
+
     compileSdkVersion 31
 
+
+
+    namespace 'com.vladih.computer_vision.flutter_vision'
+
+
     compileOptions {
+
         sourceCompatibility JavaVersion.VERSION_1_8
+
         targetCompatibility JavaVersion.VERSION_1_8
+
     }
+
 
     defaultConfig {
+
         minSdkVersion 21
-    }
-    aaptOptions {
-        noCompress 'tflite'
-        noCompress 'lite'
+
     }
 
-    buildFeatures{
-        mlModelBinding true
+    aaptOptions {
+
+        noCompress 'tflite'
+
+        noCompress 'lite'
+
     }
+
+
+    buildFeatures{
+
+        mlModelBinding true
+
+    }
+
 }
+
+
 dependencies{
+
     //implementation (files('libs/tesseract4android-release.aar'))
+
     api(name:"tesseract4android-release", ext: "aar")
+
     implementation 'com.github.vladiH:opencv-android:v1.0.0'
+
     implementation 'org.tensorflow:tensorflow-lite:2.10.0'
+
     implementation 'org.tensorflow:tensorflow-lite-api:2.10.0'
+
     implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
+
     implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
+
     implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.3'
+
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
+
     implementation 'org.tensorflow:tensorflow-lite-metadata:0.4.3'
+
     implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.11.0'
-}
+
+} 
