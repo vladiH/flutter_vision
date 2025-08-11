@@ -1,4 +1,4 @@
-name: flutter_YOLO_vision
+name: flutter_vision
 description: Plugin for managing Yolov5, Yolov8 and Yolov11 accessing with LiteRT (TensorFlow Lite) Support object detection, segmentation and OCR on Android. iOS, Working in progress.
   
 version: 2.0.0
