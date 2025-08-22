@@ -2,8 +2,6 @@ package com.vladih.computer_vision.flutter_vision.utils;
 
 import android.graphics.Bitmap;
 
-import com.googlecode.leptonica.android.Scale;
-
 import org.tensorflow.lite.DataType;
 import org.tensorflow.lite.support.common.ops.NormalizeOp;
 import org.tensorflow.lite.support.image.ImageProcessor;
@@ -13,12 +11,12 @@ import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp;
 
 public class FeedInputTensorHelper {
     private static FeedInputTensorHelper instance;
-    private TensorImage tensorImage;
-    private ImageProcessor downSizeImageProcessor;
-    private ImageProcessor upSizeImageProcessor;
+    private final TensorImage tensorImage;
+    private final ImageProcessor downSizeImageProcessor;
+    private final ImageProcessor upSizeImageProcessor;
 
-    private int previus_width = 0;
-    private  int previus_height = 0;
+    private final int previus_width;
+    private final int previus_height;
     private FeedInputTensorHelper(int width, int height, float mean, float std) {
         previus_width = width;
         previus_height = height;
@@ -58,10 +56,10 @@ public class FeedInputTensorHelper {
             //https://www.tensorflow.org/lite/inference_with_metadata/lite_support
             FeedInputTensorHelper feedInputTensorHelper = getInstance(input_width, input_height, mean, std);
             feedInputTensorHelper.tensorImage.load(bitmap);
-            if (size_option=="downsize"){
+            if (size_option.equals("downsize")){
                 return feedInputTensorHelper.downSizeImageProcessor.process(feedInputTensorHelper.tensorImage);
             }
-            if (size_option=="upsize"){
+            if (size_option.equals("upsize")){
                 return feedInputTensorHelper.upSizeImageProcessor.process(feedInputTensorHelper.tensorImage);
             }
             throw new Exception("internal error, size_option no supported");

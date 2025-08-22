@@ -15,9 +15,7 @@ buildscript {
 
 
     dependencies {
-
-        classpath 'com.android.tools.build:gradle:7.1.2'
-
+        classpath 'com.android.tools.build:gradle:8.6.0'
     }
 
 }
@@ -30,13 +28,7 @@ rootProject.allprojects {
         google()
 
         mavenCentral()
-
-        flatDir{
-
-            dirs project(":flutter_vision").file("libs")
-
-        }
-
+        
         maven {
 
             url 'https://jitpack.io'
@@ -60,12 +52,10 @@ apply plugin: 'com.android.library'
 
 
 android {
-    compileSdkVersion 31
-
-
 
     namespace 'com.vladih.computer_vision.flutter_vision'
-
+    
+    compileSdkVersion 36
 
     compileOptions {
 
@@ -79,7 +69,7 @@ android {
     defaultConfig {
 
         minSdkVersion 21
-
+        targetSdk 36
     }
 
     aaptOptions {
@@ -101,26 +91,11 @@ android {
 
 
 dependencies{
-
-    //implementation (files('libs/tesseract4android-release.aar'))
-
-    api(name:"tesseract4android-release", ext: "aar")
-
     implementation 'com.github.vladiH:opencv-android:v1.0.0'
-
-    implementation 'org.tensorflow:tensorflow-lite:2.10.0'
-
-    implementation 'org.tensorflow:tensorflow-lite-api:2.10.0'
-
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.10.0'
-
-    implementation 'org.tensorflow:tensorflow-lite-gpu-api:2.10.0'
-
-    implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.3'
-
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.3'
-
-    implementation 'org.tensorflow:tensorflow-lite-metadata:0.4.3'
-
-    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.11.0'
+    implementation 'com.google.ai.edge.litert:litert:1.4.0'
+    implementation 'com.google.ai.edge.litert:litert-api:1.4.0'
+    implementation 'com.google.ai.edge.litert:litert-gpu:1.4.0'
+    implementation 'com.google.ai.edge.litert:litert-gpu-api:1.4.0'
+    implementation 'com.google.ai.edge.litert:litert-support:1.4.0'
+    implementation 'com.google.ai.edge.litert:litert-metadata:1.4.0'
 }
