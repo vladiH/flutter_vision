@@ -60,7 +60,6 @@ apply plugin: 'com.android.library'
 
 
 android {
-
     compileSdkVersion 31
 
 
@@ -124,5 +123,4 @@ dependencies{
     implementation 'org.tensorflow:tensorflow-lite-metadata:0.4.3'
 
     implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.11.0'
-
-} 
+}
