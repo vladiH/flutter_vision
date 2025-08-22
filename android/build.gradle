@@ -1,57 +1,95 @@
-group 'com.vladih.computer_vision.flutter_vision'
+ group 'com.vladih.computer_vision.flutter_vision'
+
 version '1.0'
 
+
 buildscript {
+
     repositories {
+
         google()
+
         mavenCentral()
+
     }
+
 
     dependencies {
         classpath 'com.android.tools.build:gradle:8.6.0'
     }
+
 }
 
+
 rootProject.allprojects {
+
     repositories {
+
         google()
+
         mavenCentral()
+        
         maven {
+
             url 'https://jitpack.io'
+
         }
+
         maven{
+
             name 'ossrh-snapshot'
+
             url 'https://oss.sonatype.org/content/repositories/snapshots'
+
         }
 
     }
+
 }
+
 
 apply plugin: 'com.android.library'
 
+
 android {
-    namespace "com.vladih.computer_vision.flutter_vision"
+
+    namespace 'com.vladih.computer_vision.flutter_vision'
+    
     compileSdkVersion 36
 
     compileOptions {
+
         sourceCompatibility JavaVersion.VERSION_1_8
+
         targetCompatibility JavaVersion.VERSION_1_8
+
     }
 
+
     defaultConfig {
+
         minSdkVersion 21
         targetSdk 36
     }
+
     aaptOptions {
+
         noCompress 'tflite'
+
         noCompress 'lite'
+
     }
 
+
     buildFeatures{
+
         mlModelBinding true
+
     }
 
 }
+
+
 dependencies{
     implementation 'com.github.vladiH:opencv-android:v1.0.0'
     implementation 'com.google.ai.edge.litert:litert:1.4.0'
