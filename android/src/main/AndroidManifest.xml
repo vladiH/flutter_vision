@@ -1,5 +1,12 @@
-<manifest package="com.vladih.computer_vision.flutter_vision">
-    <!--enable this for storing  bitmap-->
-    <!--<application android:requestLegacyExternalStorage="true">
-    </application>-->
+<!-- android/src/main/AndroidManifest.xml -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.vladih.computer_vision.flutter_vision">
+    
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    
 </manifest>

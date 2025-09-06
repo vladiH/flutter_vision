@@ -98,21 +98,26 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
 
     private void load_yolo_model(Map<String, Object> args) throws Exception {
         String model = "";
-        final Object is_asset_obj = args.get("is_asset"); 
+        final Object is_asset_obj = args.get("isAsset"); 
         final boolean is_asset = is_asset_obj == null ? false : (boolean) is_asset_obj;
         String label_path = "";
+        
+        // CORREGIDO: Usar los nombres correctos que envía Dart
         if(is_asset){
-            model = this.assets.getAssetFilePathByName(args.get("model_path").toString());
-            label_path = this.assets.getAssetFilePathByName(args.get("label_path").toString());
+            model = this.assets.getAssetFilePathByName(args.get("modelPath").toString());
+            label_path = this.assets.getAssetFilePathByName(args.get("labels").toString());
         }else{
-            model = args.get("model_path").toString();
-            label_path = args.get("label_path").toString();
+            model = args.get("modelPath").toString();
+            label_path = args.get("labels").toString();
         }
-        final int num_threads = (int) args.get("num_threads");
+        
+        // CORREGIDO: Usar los nombres correctos que envía Dart
+        final int num_threads = (int) args.get("numThreads");
         final boolean quantization = (boolean) args.get("quantization");
-        final boolean use_gpu = (boolean) args.get("use_gpu");
-        final int rotation = (int) args.get("rotation");
-        final String version = args.get("model_version").toString();
+        final boolean use_gpu = (boolean) args.get("useGpu");
+        final int rotation = args.get("rotation") != null ? (int) args.get("rotation") : 0;
+        final String version = args.get("modelVersion").toString();
+        
         switch (version) {
             case "yolov5": {
                 yolo_model = new Yolov5(
@@ -177,27 +182,29 @@ public class FlutterVisionPlugin implements FlutterPlugin, MethodCallHandler {
         public DetectionTask(Yolo yolo, Map<String, Object> args, String typing, Result result) {
             this.typing = typing;
             this.yolo = yolo;
-            if (typing == "img") {
+            if (typing.equals("img")) {
                 this.image = (byte[]) args.get("bytesList");
             } else {
                 this.frame = (ArrayList) args.get("bytesList");
             }
-            this.image_height = (int) args.get("image_height");
-            this.image_width = (int) args.get("image_width");
-            this.iou_threshold = (float) (double) (args.get("iou_threshold"));
-            this.conf_threshold = (float) (double) (args.get("conf_threshold"));
-            this.class_threshold = (float) (double) (args.get("class_threshold"));
+            // CORREGIDO: Usar los nombres correctos que envía Dart
+            this.image_height = (int) args.get("imageHeight");
+            this.image_width = (int) args.get("imageWidth");
+            this.iou_threshold = (float) (double) (args.get("iouThreshold"));
+            this.conf_threshold = (float) (double) (args.get("confThreshold"));
+            this.class_threshold = (float) (double) (args.get("classThreshold"));
             this.result = result;
         }
+        
         @Override
         public void run() {
             try {
                 Bitmap bitmap;
-                if (typing == "img") {
+                if (typing.equals("img")) {
                     bitmap = BitmapFactory.decodeByteArray(image, 0, image.length);
                 } else {
                     //rotate image, because android take a photo rotating 90 degrees
-                    bitmap = utils.feedInputToBitmap(context, frame, image_height, image_width, 90);
+                    bitmap = utils.feedInputToBitmap(context, frame, image_height, image_width, yolo.getRotation());
                 }
                 int[] shape = yolo.getInputTensor().shape();
                 int src_width = bitmap.getWidth();

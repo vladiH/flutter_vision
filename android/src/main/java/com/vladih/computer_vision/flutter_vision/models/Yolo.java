@@ -59,7 +59,10 @@ public class Yolo {
         this.rotation = rotation;
     }
 
-
+    public int getRotation() {
+        return this.rotation;
+    }
+    
     public Tensor getInputTensor() {
         if (interpreter == null) return null;
         return this.interpreter.getInputTensor(0);

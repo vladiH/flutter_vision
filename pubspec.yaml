@@ -1,22 +1,25 @@
 name: flutter_vision
-description: Plugin for managing Yolov5, Yolov8 and Yolov11 accessing with LiteRT (TensorFlow Lite) Support object detection, segmentation and OCR on Android. iOS, Working in progress.
-  
+description: Plugin for managing Yolov5, Yolov8 and Yolov11 accessing with
+  LiteRT (TensorFlow Lite) Support object detection, segmentation and OCR on
+  Android. iOS, Working in progress.
+
 version: 2.0.0
 
 homepage: https://github.com/vladiH/flutter_vision
 
 environment:
-  sdk: ">=2.17.1 <4.0.0"
-  flutter: ">=2.5.0"
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: ">=3.0.0"
 
 dependencies:
+  camera: ^0.11.2
   flutter:
     sdk: flutter
-  path: ^1.9.1
+  path: ^1.9.0
   path_provider: ^2.1.5
 
 dev_dependencies:
-  flutter_lints: ^6.0.0
+  flutter_lints: ^5.0.0
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter.

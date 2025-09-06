@@ -1,104 +1,29 @@
 import 'dart:typed_data';
-
-import '../../flutter_vision.dart';
-import 'base.dart';
+import 'package:flutter_vision/src/flutter_vision_base.dart';
+import 'package:flutter_vision/src/plugin/base_flutter_vision.dart';
 
 class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
-  // @override
-  // Future<void> loadOcrModel(
-  //     {required String modelPath,
-  //     required String labels,
-  //     int? numThreads,
-  //     bool? useGpu,
-  //     String? language,
-  //     Map<String, String>? args}) async {
-  //   try {
-  //     final String testData = await loadTessData();
-  //     await channel.invokeMethod<String>('loadOcrModel', {
-  //       'model_path': modelPath,
-  //       'is_asset': true,
-  //       'num_threads': numThreads ?? 1,
-  //       'use_gpu': useGpu ?? false,
-  //       'label_path': labels,
-  //       'image_mean': 0.0,
-  //       'image_std': 255.0,
-  //       'rotation': 90,
-  //       'tess_data': testData,
-  //       'arg': args,
-  //       'language': language ?? 'eng'
-  //     });
-  //   } catch (e) {
-  //     rethrow;
-  //   }
-  // }
-
-  // @override
-  // Future<List<Map<String, dynamic>>> ocrOnFrame({
-  //   required List<Uint8List> bytesList,
-  //   required int imageHeight,
-  //   required int imageWidth,
-  //   required List<int> classIsText,
-  //   double? iouThreshold,
-  //   double? confThreshold,
-  // }) async {
-  //   try {
-  //     return await _ocrOnFrame(
-  //         bytesList: bytesList,
-  //         imageHeight: imageHeight,
-  //         imageWidth: imageWidth,
-  //         iouThreshold: iouThreshold ?? 0.4,
-  //         confThreshold: confThreshold ?? 0.5,
-  //         classIsText: classIsText);
-  //   } catch (e) {
-  //     rethrow;
-  //   }
-  // }
-
-  // Future<List<Map<String, dynamic>>> _ocrOnFrame({
-  //   required List<Uint8List> bytesList,
-  //   required int imageHeight,
-  //   required int imageWidth,
-  //   required double iouThreshold,
-  //   required double confThreshold,
-  //   required List<int> classIsText,
-  // }) async {
-  //   try {
-  //     final x = await channel.invokeMethod<List<Map<String, dynamic>>>(
-  //       'ocrOnFrame',
-  //       {
-  //         "bytesList": bytesList,
-  //         "image_height": imageHeight,
-  //         "image_width": imageWidth,
-  //         "iou_threshold": iouThreshold,
-  //         "conf_threshold": confThreshold,
-  //         "class_is_text": classIsText
-  //       },
-  //     );
-  //     return x ?? [];
-  //   } catch (e) {
-  //     rethrow;
-  //   }
-  // }
-
   @override
-  Future<void> loadYoloModel(
-      {required String modelPath,
-      required String labels,
-      required String modelVersion,
-      bool? quantization,
-      int? numThreads,
-      bool? is_asset,
-      bool? useGpu}) async {
+  Future<void> loadYoloModel({
+    required String modelPath,
+    required String labels,
+    required String modelVersion,
+    bool? quantization,
+    int? numThreads,
+    bool? useGpu,
+    bool? isAsset,
+    int? rotation,
+  }) async {
     try {
-      await channel.invokeMethod<String?>('loadYoloModel', {
-        'model_path': modelPath,
-        'is_asset': is_asset ?? false,
+      await channel.invokeMethod('loadYoloModel', {
+        'modelPath': modelPath,
+        'labels': labels,
+        'modelVersion': modelVersion,
         'quantization': quantization ?? false,
-        'num_threads': numThreads ?? 1,
-        'use_gpu': useGpu ?? false,
-        'label_path': labels,
-        'rotation': 90,
-        'model_version': modelVersion
+        'numThreads': numThreads ?? 4,
+        'useGpu': useGpu ?? false,
+        'isAsset': isAsset ?? true,
+        'rotation': rotation ?? 90,
       });
     } catch (e) {
       rethrow;
@@ -115,43 +40,17 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
     double? classThreshold,
   }) async {
     try {
-      return (await _yoloOnFrame(
-          bytesList: bytesList,
-          imageHeight: imageHeight,
-          imageWidth: imageWidth,
-          iouThreshold: iouThreshold ?? 0.4,
-          confThreshold: confThreshold ?? 0.5,
-          classThreshold: classThreshold ?? 0.5));
-    } catch (e) {
-      rethrow;
-    }
-  }
+      final List<dynamic> result = await channel.invokeMethod('yoloOnFrame', {
+        'bytesList': bytesList,
+        'imageHeight': imageHeight,
+        'imageWidth': imageWidth,
+        'iouThreshold': iouThreshold ?? 0.4,
+        'confThreshold': confThreshold ?? 0.5,
+        'classThreshold': classThreshold ?? 0.5,
+      });
 
-  Future<List<Map<String, dynamic>>> _yoloOnFrame({
-    required List<Uint8List> bytesList,
-    required int imageHeight,
-    required int imageWidth,
-    required double iouThreshold,
-    required double confThreshold,
-    required double classThreshold,
-  }) async {
-    try {
-      final x = await channel.invokeMethod<List<dynamic>>(
-        'yoloOnFrame',
-        {
-          "bytesList": bytesList,
-          "image_height": imageHeight,
-          "image_width": imageWidth,
-          "iou_threshold": iouThreshold,
-          "conf_threshold": confThreshold,
-          "class_threshold": classThreshold
-        },
-      );
-      return x?.isNotEmpty ?? false
-          ? x!.map((e) => Map<String, dynamic>.from(e)).toList()
-          : [];
+      return result.map((e) => Map<String, dynamic>.from(e)).toList();
     } catch (e) {
-      // print(e);
       rethrow;
     }
   }
@@ -166,81 +65,52 @@ class AndroidFlutterVision extends BaseFlutterVision implements FlutterVision {
     double? classThreshold,
   }) async {
     try {
-      return await _yoloOnImage(
-          bytesList: bytesList,
-          imageHeight: imageHeight,
-          imageWidth: imageWidth,
-          iouThreshold: iouThreshold ?? 0.4,
-          confThreshold: confThreshold ?? 0.5,
-          classThreshold: classThreshold ?? 0.5);
+      final List<dynamic> result = await channel.invokeMethod('yoloOnImage', {
+        'bytesList': bytesList,
+        'imageHeight': imageHeight,
+        'imageWidth': imageWidth,
+        'iouThreshold': iouThreshold ?? 0.4,
+        'confThreshold': confThreshold ?? 0.5,
+        'classThreshold': classThreshold ?? 0.5,
+      });
+
+      return result.map((e) => Map<String, dynamic>.from(e)).toList();
     } catch (e) {
       rethrow;
     }
   }
 
-  Future<List<Map<String, dynamic>>> _yoloOnImage({
-    required Uint8List bytesList,
-    required int imageHeight,
-    required int imageWidth,
-    required double iouThreshold,
-    required double confThreshold,
-    required double classThreshold,
-  }) async {
-    try {
-      final x = await channel.invokeMethod<List<dynamic>>(
-        'yoloOnImage',
-        {
-          "bytesList": bytesList,
-          "image_height": imageHeight,
-          "image_width": imageWidth,
-          "iou_threshold": iouThreshold,
-          "conf_threshold": confThreshold,
-          "class_threshold": classThreshold
-        },
-      );
-      return x?.isNotEmpty ?? false
-          ? x!.map((e) => Map<String, dynamic>.from(e)).toList()
-          : [];
-    } catch (e) {
-      rethrow;
-    }
-  }
+  // @override
+  // Future<void> loadTesseractModel({
+  //   String? language,
+  //   Map<String, String>? args,
+  // }) async {
+  //   try {
+  //     final String tessDataPath = await loadTessData();
 
-  @override
-  Future<void> loadTesseractModel(
-      {String? language, Map<String, String>? args}) async {
-    try {
-      final String testData = await loadTessData();
-      await channel.invokeMethod<String?>('loadTesseractModel',
-          {'tess_data': testData, 'arg': args, 'language': language ?? 'eng'});
-    } catch (e) {
-      rethrow;
-    }
-  }
+  //     await channel.invokeMethod('loadTesseractModel', {
+  //       'language': language ?? 'eng',
+  //       'tessDataPath': tessDataPath,
+  //       'args': args ?? {},
+  //     });
+  //   } catch (e) {
+  //     rethrow;
+  //   }
+  // }
 
-  @override
-  Future<List<Map<String, dynamic>>> tesseractOnImage({
-    required Uint8List bytesList,
-  }) async {
-    try {
-      return await _tesseractOnImage(bytesList: bytesList);
-    } catch (e) {
-      rethrow;
-    }
-  }
+  // @override
+  // Future<List<Map<String, dynamic>>> tesseractOnImage({
+  //   required Uint8List bytesList,
+  // }) async {
+  //   try {
+  //     final List<dynamic> result = await channel.invokeMethod(
+  //       'tesseractOnImage',
+  //       {'bytesList': bytesList},
+  //     );
 
-  Future<List<Map<String, dynamic>>> _tesseractOnImage(
-      {required Uint8List bytesList}) async {
-    try {
-      final x = await channel.invokeMethod<dynamic>(
-        'tesseractOnImage',
-        {
-          "bytesList": bytesList,
-        },
-      );
-      return x == null ? [] : [Map<String, dynamic>.from(x)];
-    } catch (e) {
-      rethrow;
-    }
-  }
+  //     return result.map((e) => Map<String, dynamic>.from(e)).toList();
+  //   } catch (e) {
+  //     rethrow;
+  //   }
+  // }
 }
