@@ -19,7 +19,20 @@ workflows:
         script: |
           cd example
           flutter pub get
-          flutter build ios --simulator --debug
+          if ! flutter build ios --simulator --debug -v > build_verbose.log 2>&1; then
+            echo "=== Errors ==="
+            grep -E "error:|Undefined symbols|ld: " build_verbose.log | sort -u | head -40
+            echo "=== Link steps ==="
+            grep -E "^Ld " build_verbose.log | head -20
+            echo "=== Who references LiteRT ==="
+            grep -A4 "_LiteRtCreateEnvironment" build_verbose.log | head -20
+            echo "=== Frameworks passed to the failing link ==="
+            grep -E "clang.* -o .*(Runner|debug\.dylib)" build_verbose.log | tail -1 | tr ' ' '\n' | grep -E "^-F|^-framework|CLiteRT|^-L|\.a$|\.o$" | head -60
+            echo "=== Generated plugin package ==="
+            cat ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage/Package.swift || true
+            exit 1
+          fi
+          tail -5 build_verbose.log
 
       - name: Integration tests on an iOS simulator
         script: |

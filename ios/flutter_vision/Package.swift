@@ -37,7 +37,12 @@ let package = Package(
         .target(
             name: "FlutterVisionLiteRT",
             dependencies: ["CLiteRT"],
-            exclude: ["LICENSE"]
+            exclude: ["LICENSE"],
+            linkerSettings: [
+                // Make sure the app links LiteRT even when Xcode does not
+                // propagate the binary target through Flutter's generated package.
+                .linkedFramework("CLiteRT")
+            ]
         ),
         .binaryTarget(
             name: "CLiteRT",
