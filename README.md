@@ -42,10 +42,12 @@ Nothing to configure. The plugin needs `minSdk 24` (the Flutter default).
   Apple Silicon Macs work; the simulator on Intel Macs (x86_64) does not.
   `flutter run` on a simulator builds only arm64, but
   `flutter build ios --simulator` builds both architectures and fails to link
-  unless you exclude x86_64. In Xcode, open the Runner project (not the
-  target) > Build Settings > Excluded Architectures, and add `x86_64` for
-  "Any iOS Simulator SDK"; this writes
-  `"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;` in `project.pbxproj`.
+  unless you exclude x86_64. In Xcode, select the **Runner target** > Build
+  Settings > Excluded Architectures and set "Any iOS Simulator SDK" to
+  `$(inherited) x86_64` for Debug, Profile and Release. This writes
+  `"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "$(inherited) x86_64";` in
+  `project.pbxproj`. (At project level it has no effect: Flutter's
+  `Generated.xcconfig` overrides it.)
 
 ## Preparing a model
 
