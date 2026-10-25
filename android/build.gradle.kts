@@ -46,6 +46,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     testOptions {
@@ -69,8 +70,14 @@ kotlin {
 
 dependencies {
     // LiteRT runtime + CompiledModel API (CPU / NPU) and the GPU accelerator.
-    implementation("com.google.ai.edge.litert:litert:2.3.0")
-    implementation("com.google.ai.edge.litert:litert-gpu:2.3.0")
+    // Play AI packs (model download) are not used; they bring WorkManager and
+    // Room, which crash at startup in release builds minified by R8.
+    implementation("com.google.ai.edge.litert:litert:2.3.0") {
+        exclude(group = "com.google.android.play", module = "ai-delivery")
+    }
+    implementation("com.google.ai.edge.litert:litert-gpu:2.3.0") {
+        exclude(group = "com.google.android.play", module = "ai-delivery")
+    }
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")

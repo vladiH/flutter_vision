@@ -1,3 +1,11 @@
+## 3.0.2
+
+* Fix a crash at startup in Android release builds ("Failed to create an
+  instance of class androidx.work.impl.WorkDatabase"). LiteRT pulled in Google
+  Play AI delivery, and with it WorkManager and Room, which R8 breaks; the
+  plugin does not use it and now excludes it, which also makes apps smaller.
+* Tested in release mode on a Pixel 6a: 113 ms per photo on CPU, 36 ms on GPU.
+
 ## 3.0.1
 
 * Shorter package description (pub.dev requires 60 to 180 characters).
