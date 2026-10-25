@@ -1,9 +1,8 @@
 name: flutter_vision
 description: >-
-  Real-time object detection and instance segmentation with YOLO models
-  (YOLOv5, v8, v9, v10, v11, v12, YOLO26) on Android and iOS, powered by
-  LiteRT with CPU, GPU and NPU acceleration.
-version: 3.0.0
+  YOLO object detection and instance segmentation for Flutter on Android and
+  iOS (YOLOv5 to YOLO26), powered by LiteRT with CPU, GPU and NPU acceleration.
+version: 3.0.1
 homepage: https://github.com/vladiH/flutter_vision
 repository: https://github.com/vladiH/flutter_vision
 issue_tracker: https://github.com/vladiH/flutter_vision/issues

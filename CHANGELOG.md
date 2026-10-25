@@ -1,3 +1,7 @@
+## 3.0.1
+
+* Shorter package description (pub.dev requires 60 to 180 characters).
+
 ## 3.0.0
 
 Complete rewrite. See [MIGRATION.md](MIGRATION.md) to upgrade from 2.x.
