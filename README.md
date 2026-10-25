@@ -289,8 +289,6 @@ camera frames, and check the detections on a real photo. The repository's
 
 * uint8-input models (for example non-YOLO SSD models) are not supported.
 * The iOS Simulator needs an Apple Silicon Mac.
-* Live camera detection on a physical iPhone has not been tested yet in this
-  release; photos, frames and segmentation are tested on the iOS simulator.
 
 ## Developing the iOS side on Windows
 
