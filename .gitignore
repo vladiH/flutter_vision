@@ -15,9 +15,7 @@
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code
 .vscode/
 
 # Flutter/Dart/Pub related
@@ -25,6 +23,15 @@
 /pubspec.lock
 **/doc/api/
 .dart_tool/
-.packages
+.flutter-plugins-dependencies
 build/
-.fvm
+
+# Native build output
+.cxx/
+.gradle/
+.kotlin/
+.build/
+.swiftpm/
+
+# FVM Version Cache
+.fvm/

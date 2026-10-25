@@ -1,12 +1,15 @@
-<!-- android/src/main/AndroidManifest.xml -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.vladih.computer_vision.flutter_vision">
-    
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
-    
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- No permissions: the app decides whether it needs the camera or storage. -->
+    <application>
+        <!-- OpenCL is used by the LiteRT GPU accelerator when the device has it. -->
+        <uses-native-library
+            android:name="libOpenCL.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libOpenCL-pixel.so"
+            android:required="false" />
+        <uses-native-library
+            android:name="libOpenCL-car.so"
+            android:required="false" />
+    </application>
 </manifest>

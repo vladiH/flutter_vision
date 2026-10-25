@@ -1,0 +1,37 @@
+# Codemagic CI: verifies the plugin on iOS (Apple Silicon simulator, where
+# LiteRT's arm64 binaries run). Start it manually from the Codemagic UI.
+workflows:
+  ios-tests:
+    name: iOS build and integration tests
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: 3.47.8
+      xcode: latest
+    scripts:
+      - name: Dart analysis and unit tests
+        script: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Build the example for the iOS simulator
+        script: |
+          cd example
+          flutter pub get
+          flutter build ios --simulator --debug
+
+      - name: Integration tests on an iOS simulator
+        script: |
+          cd example
+          UDID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          runtimes = sorted((r for r in devices if "iOS" in r), reverse=True)
+          print(next(d["udid"] for r in runtimes for d in devices[r]
+                     if d["name"].startswith("iPhone")))
+          ')
+          echo "Simulator: $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          flutter test integration_test -d "$UDID" --reporter expanded
