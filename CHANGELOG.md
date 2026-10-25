@@ -25,7 +25,17 @@ Complete rewrite. See [MIGRATION.md](MIGRATION.md) to upgrade from 2.x.
 * No more crashes when a model is closed or replaced during a detection, and
   no more native memory leaks.
 * The plugin no longer adds camera or storage permissions to your app.
-* Requires Flutter 3.41+, Android minSdk 24, iOS 15.
+* The pub.dev package is about 120 KB: the example models stay on GitHub.
+* Requires Flutter 3.41+, Android minSdk 24, iOS 15. On iOS the simulator
+  needs an Apple Silicon Mac (LiteRT ships arm64 only); see the README for
+  the `EXCLUDED_ARCHS` setting needed by `flutter build ios --simulator`.
+* Fixes reported issues: 16 KB page size (#58), app size (#27, #40), live
+  detection not working on some phones (#34, #36, #37), segmentation crash
+  with empty masks (#39), several models at once (#43), portrait photos
+  (#41), NCHW inputs (#37) and iOS support (#8). Asset loading errors now say
+  what to check (#44, #51). uint8-input models (#42) are still not supported.
+* Tested with Flutter 3.47.8: unit tests, and integration tests on an
+  Android 16 emulator and on an iOS simulator (Xcode 26.6).
 
 ## 2.0.0
 * **BREAKING CHANGE**: Removed all Tesseract OCR functionality.

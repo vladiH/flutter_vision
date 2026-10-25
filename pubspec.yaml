@@ -21,6 +21,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Used by the Pigeon generated bindings (lib/src/messages.g.dart).
+  meta: ^1.17.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0

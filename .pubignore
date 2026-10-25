@@ -1,0 +1,26 @@
+# Files left out of the package published on pub.dev.
+# (When this file exists, pub ignores .gitignore in this folder, so the usual
+# build outputs are listed again.)
+
+# Build and tool output
+build/
+.dart_tool/
+.flutter-plugins-dependencies
+.gradle/
+.kotlin/
+.cxx/
+.build/
+.swiftpm/
+.idea/
+.vscode/
+*.iml
+.fvm/
+pubspec.lock
+!example/pubspec.lock
+
+# Repository tooling, not needed by apps
+.fvmrc
+codemagic.yaml
+
+# The example models (about 25 MB) stay on GitHub; see example/README.md.
+example/assets/*.tflite

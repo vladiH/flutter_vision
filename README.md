@@ -1,9 +1,31 @@
 # flutter_vision
 
+[![pub package](https://img.shields.io/pub/v/flutter_vision.svg)](https://pub.dev/packages/flutter_vision)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Real-time object detection and instance segmentation with
 [Ultralytics YOLO](https://github.com/ultralytics/ultralytics) models in
 Flutter, on **Android and iOS**, powered by
 [LiteRT](https://ai.google.dev/edge/litert) (TensorFlow Lite).
+
+## What's new in 3.0
+
+Version 3.0 is a complete rewrite. Highlights:
+
+* **iOS support**, with the same results as Android.
+* A new, typed API: `YoloModel.load`, `detectImage`, `detectFrame`, `dispose`,
+  `Detection` results and `BoxMapper` to draw them.
+* The model format is detected automatically; several models can run at once.
+* LiteRT 2.3 with CPU, GPU and NPU acceleration and automatic CPU fallback.
+* Correct camera frames on every device, EXIF orientation for photos,
+  letterbox resizing like Ultralytics, class-aware NMS.
+* OpenCV removed: apps are much smaller and the native libraries meet the
+  Android 15+ 16 KB page size requirement.
+
+Upgrading from 2.x? Read [MIGRATION.md](MIGRATION.md). Full list of changes in
+[CHANGELOG.md](CHANGELOG.md).
+
+## Platform support
 
 | | Android | iOS |
 |---|---|---|
@@ -11,14 +33,34 @@ Flutter, on **Android and iOS**, powered by
 | Detection | ✅ | ✅ |
 | Segmentation | ✅ | ✅ |
 | CPU / GPU | ✅ / ✅ (OpenCL, OpenGL) | ✅ / ✅ (Metal) |
-| NPU | ✅ (with the vendor runtime, see below) | — |
+| NPU | ✅ with the vendor runtime (see below) | — |
+| Tested on | Android 16 emulator | iOS simulator (Xcode 26.6, Apple Silicon) |
 
-The output format is detected automatically from the model, so any Ultralytics
-TFLite export works: anchor-based (YOLOv5, YOLOv7), anchor-free (YOLOv8, v9,
-YOLO11, v12) and NMS-free (YOLOv10, YOLO26), in detection and segmentation
-variants. The example app ships YOLOv5n, YOLOv8n, YOLO11n and YOLOv8n-seg.
+Flutter 3.41 or newer is required (developed and tested with Flutter 3.47.8).
 
-> Upgrading from 2.x? Read [MIGRATION.md](MIGRATION.md).
+## Supported models
+
+The output format is detected automatically from the model, so any
+Ultralytics TFLite export works:
+
+| Family | Models | Format |
+|---|---|---|
+| Anchor-based | YOLOv5, YOLOv7 | `[1, N, 5 + classes]` |
+| Anchor-free | YOLOv8, YOLOv9, YOLO11, YOLOv12 | `[1, 4 + classes, N]` |
+| NMS-free | YOLOv10, YOLO26 | `[1, 300, 6]` |
+
+Detection and segmentation (`-seg`) variants are supported, with float32,
+float16 and int8 models.
+
+Results of the bundled example models on Ultralytics' sample photo (a bus and
+four people). Android and iOS agree within about two points:
+
+| Model | Bus | People found (≥ 50%) | Task |
+|---|---|---|---|
+| YOLO11n | 94% | 3 (90%, 85%, 83%) | detection |
+| YOLOv8n | 84% | 3 (89%, 88%, 88%) | detection |
+| YOLOv5n | 79% | 3 (87%, 83%, 79%) | detection |
+| YOLOv8n-seg | 87% | 3 (86%, 83%, 81%) | segmentation |
 
 ## Installation
 
@@ -29,7 +71,9 @@ dependencies:
 
 ### Android
 
-Nothing to configure. The plugin needs `minSdk 24` (the Flutter default).
+Nothing to configure. The plugin needs `minSdk 24` (the Flutter default) and
+does not add any permission to your app; declare `CAMERA` yourself if you use
+the camera.
 
 ### iOS
 
@@ -48,6 +92,7 @@ Nothing to configure. The plugin needs `minSdk 24` (the Flutter default).
   `"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = "$(inherited) x86_64";` in
   `project.pbxproj`. (At project level it has no effect: Flutter's
   `Generated.xcconfig` overrides it.)
+* Add `NSCameraUsageDescription` to `Info.plist` if you use the camera.
 
 ## Preparing a model
 
@@ -62,7 +107,7 @@ yolo export model=yolo11n-seg.pt format=tflite      # segmentation
 Use one of the generated files, for example
 `yolo11n_saved_model/yolo11n_float16.tflite` (`_float32` and `_int8` also
 work). Create a labels file with one class name per line, in class index
-order (the `names` of your `data.yaml`).
+order (the `names` of your `data.yaml`; a `0: person` style is accepted too).
 
 Add both to your app's assets:
 
@@ -93,7 +138,8 @@ await model.dispose();
 ```
 
 Several models can be loaded at once. Each model runs on its own native
-thread.
+thread, and calls to the same model run one after another. Models can also be
+loaded from a file on the device with `source: ModelSource.file`.
 
 ### Options
 
@@ -106,6 +152,7 @@ final result = await model.detectImage(
     maxDetections: 100,
     classes: {0, 2},          // only these class indices
     classAgnosticNms: false,
+    maskThreshold: 0.5,       // segmentation only
   ),
 );
 ```
@@ -154,7 +201,8 @@ await controller.startImageStream((image) async {
 ```
 
 `detectFrame` skips frames while the previous one is still running, so the
-results stay real time instead of lagging behind.
+results stay real time instead of lagging behind. YUV420 frames with row
+padding (Android `YUV_420_888`) are supported too.
 
 ### Drawing the results
 
@@ -175,9 +223,6 @@ if (detection.polygon != null) {
 }
 ```
 
-The [example app](example/lib) has complete image, segmentation and live
-camera screens.
-
 ## Results
 
 `YoloResult`:
@@ -186,7 +231,7 @@ camera screens.
 |---|---|
 | `detections` | `List<Detection>`, highest confidence first |
 | `imageSize` | size of the upright image |
-| `preprocessTime`, `inferenceTime`, `postprocessTime` | timings |
+| `preprocessTime`, `inferenceTime`, `postprocessTime`, `totalTime` | timings |
 
 `Detection`:
 
@@ -196,6 +241,9 @@ camera screens.
 | `label`, `classIndex` | class |
 | `confidence` | 0 to 1 |
 | `polygon` | outline in image pixels (segmentation models only) |
+
+`YoloModel` also exposes `task`, `format`, `inputSize`, `labels` and
+`accelerator` (the hardware actually used).
 
 ## Hardware acceleration
 
@@ -209,21 +257,54 @@ camera screens.
 
 `model.accelerator` tells which one is actually used.
 
+## Example app
+
+The [example app](example) has screens for photos, segmentation and the live
+camera, and lets you pick the model and the hardware. Its models are in the
+GitHub repository (they are left out of the pub.dev package to keep it small).
+
+## Testing
+
+```bash
+flutter test                                   # Dart unit tests (decoding, NMS, masks...)
+cd example && flutter test integration_test    # end-to-end tests on a device or emulator
+```
+
+The integration tests load the four example models, run them on images and
+camera frames, and check the detections on a real photo. The repository's
+[`codemagic.yaml`](codemagic.yaml) runs them on an iOS simulator in
+[Codemagic](https://codemagic.io).
+
 ## Troubleshooting
 
 | Error | Fix |
 |---|---|
 | `not_found` | The path must match the asset entry in `pubspec.yaml` exactly. |
 | `unsupported_model`: labels do not match | The labels file must have one line per class of the model. |
-| `unsupported_model`: outputs must be float32 | Export with `format=tflite` and use the `_float16`, `_float32` or `_int8` file. |
+| `unsupported_model`: input or outputs | Use a YOLO TFLite export with float32 or int8 tensors (`_float16`, `_float32` or `_int8` file). |
+| iOS: `Undefined symbol: _LiteRt...` for x86_64 | Exclude x86_64 for the simulator (see the iOS installation notes). |
 | Boxes are shifted on screen | Use `BoxMapper` with the same `BoxFit` as the widget showing the image. |
+
+## Known limitations
+
+* uint8-input models (for example non-YOLO SSD models) are not supported.
+* The iOS Simulator needs an Apple Silicon Mac.
+* Live camera detection on a physical iPhone has not been tested yet in this
+  release; photos, frames and segmentation are tested on the iOS simulator.
 
 ## Developing the iOS side on Windows
 
-[xcross](https://github.com/arxdeus/xcross) builds, installs and hot-reloads
-Flutter iOS apps on a real iPhone (iOS 17+) from Windows or Linux. It works
-with this plugin because the iOS side is a Swift package. It needs a Swift
-toolchain, LLVM and an `Xcode.xip` that you download with your Apple ID.
+* [Codemagic](https://codemagic.io) (cloud Macs, free tier) builds and tests
+  the plugin on an iOS simulator with the included `codemagic.yaml`.
+* [xcross](https://github.com/arxdeus/xcross) builds, installs and hot-reloads
+  Flutter iOS apps on a real iPhone (iOS 17+) from Windows or Linux. It works
+  with this plugin because the iOS side is a Swift package.
+
+## Releases
+
+* Versions and their changes: [CHANGELOG.md](CHANGELOG.md).
+* Published versions: [pub.dev/packages/flutter_vision](https://pub.dev/packages/flutter_vision/versions).
+* Source of each release: [GitHub releases](https://github.com/vladiH/flutter_vision/releases).
 
 ## Contact
 
