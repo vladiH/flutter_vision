@@ -40,6 +40,12 @@ Nothing to configure. The plugin needs `minSdk 24` (the Flutter default).
   `flutter config --enable-swift-package-manager`.
 * LiteRT ships arm64 binaries only: real iPhones and the iOS Simulator on
   Apple Silicon Macs work; the simulator on Intel Macs (x86_64) does not.
+  `flutter run` on a simulator builds only arm64, but
+  `flutter build ios --simulator` builds both architectures and fails to link
+  unless you exclude x86_64. In Xcode, open the Runner project (not the
+  target) > Build Settings > Excluded Architectures, and add `x86_64` for
+  "Any iOS Simulator SDK"; this writes
+  `"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;` in `project.pbxproj`.
 
 ## Preparing a model
 
